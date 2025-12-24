@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ 'rtl' if lang == 'ar' else 'ltr' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ brand }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>:root { --primary: {{ primary_color }}; }</style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="lang-{{ lang }}">
+    {% if current_user.is_authenticated %}
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">🪷</span>
+            <span>{{ brand }}</span>
+        </div>
+        <div class="nav-links">
+            <a href="{{ url_for('main.dashboard') }}">{{ t('main_menu') }}</a>
+            {% if current_user.permissions and current_user.permissions.can_view_reports %}
+            <a href="{{ url_for('reports.index') }}">{{ t('reports') }}</a>
+            {% endif %}
+            {% if current_user.permissions and current_user.permissions.can_manage_users %}
+            <a href="{{ url_for('admin.index') }}">{{ t('admin_panel') }}</a>
+            {% endif %}
+            <a href="{{ url_for('auth.set_language', lang='ar') }}" class="{{ 'active' if lang=='ar' else '' }}">AR</a>
+            <a href="{{ url_for('auth.set_language', lang='en') }}" class="{{ 'active' if lang=='en' else '' }}">EN</a>
+            <span class="user-badge">{{ t('welcome') }}, {{ current_user.username }}</span>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-outline">{{ t('logout') }}</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">
+                {% if message in ['complaint_saved','invalid_credentials'] %}{{ t(message) }}{% else %}{{ message }}{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>{{ brand }} &copy; 2026 · {{ t('backup_info') }}</p>
+    </footer>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

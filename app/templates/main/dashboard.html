@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">{{ t('main_menu') }}</h1>
+<div class="feature-grid">
+    {% for func in functions %}
+    {% set name = func.function_name if lang == 'ar' else (func.function_name_en or func.function_name) %}
+    <a href="{{ url_for(func.route_name) if '.' in func.route_name else '#' }}"
+       class="feature-card" style="--card-color: {{ func.color_hex }}">
+        <span class="feature-icon">{{ func.icon }}</span>
+        <span class="feature-name">{{ name }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

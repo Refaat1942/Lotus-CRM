@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ t('reports') }} - {{ brand }}{% endblock %}
+{% block content %}
+<h1 class="page-title">📊 {{ t('reports') }}</h1>
+<div class="feature-grid small">
+    <a href="{{ url_for('reports.complaints_report') }}" class="feature-card" style="--card-color:#0288d1">
+        <span class="feature-icon">📋</span><span class="feature-name">{{ t('complaints_report') }}</span>
+    </a>
+    <a href="{{ url_for('reports.customers_report') }}" class="feature-card" style="--card-color:#43a047">
+        <span class="feature-icon">👥</span><span class="feature-name">{{ t('customers_report') }}</span>
+    </a>
+</div>
+{% endblock %}

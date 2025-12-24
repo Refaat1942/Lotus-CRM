@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ t('new_complaint') }} - {{ brand }}{% endblock %}
+{% block content %}
+<h1 class="page-title">📝 {{ t('new_complaint') }}</h1>
+<form method="POST" class="form-card">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>{{ t('employee') }}</label>
+            <select name="employee_code" required>
+                <option value="">--</option>
+                {% for e in employees %}
+                <option value="{{ e.employee_code }}">{{ e.employee_code }} - {{ e.employee_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{ t('branch') }}</label>
+            <select name="branch_code" required>
+                <option value="">--</option>
+                {% for b in branches %}
+                <option value="{{ b.branch_code }}">{{ b.branch_code }} - {{ b.branch_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{ t('phone') }}</label>
+            <div class="input-group">
+                <input type="text" name="phone" id="phone" required>
+                <button type="button" class="btn btn-secondary" onclick="lookupCustomer()">{{ t('search') }}</button>
+            </div>
+            <span id="customer-info" class="hint"></span>
+        </div>
+        <div class="form-group">
+            <label>{{ t('complaint_type') }}</label>
+            <select name="complaint_type" id="complaint_type" onchange="toggleOnline()">
+                {% for ct in complaint_types %}
+                <option value="{{ ct }}">{{ ct }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" id="online-group" style="display:none">
+            <label>{{ t('online_channel') }}</label>
+            <select name="online_channel">
+                {% for ch in online_channels %}
+                <option value="{{ ch }}">{{ ch }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group full-width">
+            <label>{{ t('complaint_text') }}</label>
+            <textarea name="complaint_text" rows="5" required></textarea>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">💾 {{ t('save') }}</button>
+</form>
+{% endblock %}
+{% block extra_js %}
+<script>
+function toggleOnline() {
+    const sel = document.getElementById('complaint_type').value;
+    document.getElementById('online-group').style.display = sel === 'مشكلة اون لاين' ? 'block' : 'none';
+}
+async function lookupCustomer() {
+    const phone = document.getElementById('phone').value.trim();
+    const info = document.getElementById('customer-info');
+    if (!phone) return;
+    const res = await fetch(`/complaints/api/customer/${encodeURIComponent(phone)}`);
+    const data = await res.json();
+    info.textContent = data.found ? data.name : '{{ t("customer_not_found") }}';
+    info.className = 'hint ' + (data.found ? 'success' : 'error');
+}
+</script>
+{% endblock %}

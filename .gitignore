@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.exe
+build/
+dist/
+.env
+backups/
+*.sql.gz
+.venv/
+venv/
+instance/

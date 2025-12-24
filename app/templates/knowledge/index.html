@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ t('knowledge_base') }} - {{ brand }}{% endblock %}
+{% block content %}
+<h1 class="page-title">💊 {{ t('knowledge_base') }}</h1>
+<div class="tabs">
+    <button class="tab active" onclick="showTab('search')">🔍 {{ t('search') }}</button>
+    <button class="tab" onclick="showTab('alt')">💊 Alternatives</button>
+</div>
+<div id="tab-search" class="tab-panel">
+    <div class="filter-bar">
+        <input type="text" id="search-q" placeholder="Item code or name..." onkeydown="if(event.key==='Enter')doSearch()">
+        <button class="btn btn-primary" onclick="doSearch()">{{ t('search') }}</button>
+    </div>
+    <table class="data-table" id="search-table">
+        <thead><tr><th>Code</th><th>Name</th><th>Ingredient</th><th>Use</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</div>
+<div id="tab-alt" class="tab-panel" style="display:none">
+    <div class="filter-bar">
+        <input type="text" id="alt-q" placeholder="Active ingredient...">
+        <button class="btn btn-primary" onclick="doAlt()">{{ t('search') }}</button>
+    </div>
+    <table class="data-table" id="alt-table">
+        <thead><tr><th>Code</th><th>Name</th><th>Ingredient</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function showTab(name) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.style.display='none');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-'+name).style.display='block';
+    event.target.classList.add('active');
+}
+async function doSearch() {
+    const q = document.getElementById('search-q').value;
+    const res = await fetch('/knowledge/api/search?q='+encodeURIComponent(q));
+    const rows = await res.json();
+    document.querySelector('#search-table tbody').innerHTML = rows.map(r =>
+        `<tr><td>${r.item_code}</td><td>${r.item_name}</td><td>${r.active_ingredient||''}</td><td>${r.medical_use||''}</td></tr>`
+    ).join('');
+}
+async function doAlt() {
+    const q = document.getElementById('alt-q').value;
+    const res = await fetch('/knowledge/api/alternatives?ingredient='+encodeURIComponent(q));
+    const rows = await res.json();
+    document.querySelector('#alt-table tbody').innerHTML = rows.map(r =>
+        `<tr><td>${r.item_code}</td><td>${r.item_name}</td><td>${r.active_ingredient||''}</td></tr>`
+    ).join('');
+}
+</script>
+{% endblock %}

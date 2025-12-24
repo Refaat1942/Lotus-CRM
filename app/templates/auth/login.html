@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-header">
+            <span class="logo-large">🪷</span>
+            <h1>{{ brand }}</h1>
+            <p>{{ t('tagline') }}</p>
+        </div>
+        <form method="POST" class="login-form">
+            <label>{{ t('username') }}</label>
+            <input type="text" name="username" required autofocus>
+            <label>{{ t('password') }}</label>
+            <input type="password" name="password" required>
+            <button type="submit" class="btn btn-primary btn-block">{{ t('login') }}</button>
+        </form>
+        <div class="lang-switch">
+            <a href="{{ url_for('auth.set_language', lang='ar') }}">{{ t('arabic') }}</a>
+            <span>|</span>
+            <a href="{{ url_for('auth.set_language', lang='en') }}">{{ t('english') }}</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

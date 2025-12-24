@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lotus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lotus_secret_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-lotus_crm}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lotus} -d ${POSTGRES_DB:-lotus_crm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "16350:16350"
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-lotus}:${POSTGRES_PASSWORD:-lotus_secret_change_me}@db:5432/${POSTGRES_DB:-lotus_crm}
+      SECRET_KEY: ${SECRET_KEY:-change-this-secret-key-in-production}
+      APP_PORT: "16350"
+      DEFAULT_LANGUAGE: ${DEFAULT_LANGUAGE:-ar}
+      BACKUP_DIR: /backups
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backups:/backups
+    command: >
+      sh -c "python scripts/init_db.py &&
+             gunicorn --bind 0.0.0.0:16350 --workers 2 --timeout 120 run:app"
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-lotus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lotus_secret_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-lotus_crm}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup_db.sh:/backup_db.sh:ro
+    entrypoint: /bin/sh
+    command: >
+      -c "chmod +x /backup_db.sh &&
+          while true; do
+            /backup_db.sh >> /backups/backup.log 2>&1;
+            sleep 86400;
+          done"
+
+volumes:
+  postgres_data:
