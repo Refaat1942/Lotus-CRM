@@ -7,6 +7,7 @@ from openpyxl import Workbook
 
 from app.decorators import feature_required, permission_required
 from app.models import Branch, Complaint, Customer
+from app.services.complaints import complaint_display_number
 
 reports_bp = Blueprint("reports", __name__)
 
@@ -62,6 +63,7 @@ def complaints_report():
     for c in rows:
         data.append(
             {
+                "Serial": complaint_display_number(c),
                 "ID": c.complaint_id,
                 "Phone": c.phone_number,
                 "Type": c.complaint_type,

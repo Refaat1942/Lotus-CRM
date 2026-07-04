@@ -3,6 +3,7 @@ import os
 import sys
 
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import IntegrityError
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -10,9 +11,14 @@ from app import create_app
 from app.extensions import db
 from app.models import (
     AppSetting,
+    AuditLog,
     Branch,
+    Complaint,
+    ComplaintDetail,
     ComplaintType,
+    Customer,
     Employee,
+    ProductKnowledge,
     SystemFunction,
     User,
     UserFunctionAccess,
@@ -78,8 +84,8 @@ DEFAULT_FUNCTIONS = [
         "sort_order": 6,
     },
     {
-        "function_name": "لوحة الشكاوى",
-        "function_name_en": "Complaints Dashboard",
+        "function_name": "لوحة عامة",
+        "function_name_en": "Overview Dashboard",
         "route_name": "complaints.dashboard",
         "icon": "📊",
         "color_hex": "#512DA8",
@@ -109,6 +115,14 @@ DEFAULT_FUNCTIONS = [
         "color_hex": "#455A64",
         "sort_order": 10,
     },
+    {
+        "function_name": "سجل التدقيق",
+        "function_name_en": "Audit Logs",
+        "route_name": "admin.audit_logs",
+        "icon": "📜",
+        "color_hex": "#546E7A",
+        "sort_order": 11,
+    },
 ]
 
 SAMPLE_BRANCHES = [
@@ -134,6 +148,49 @@ DEFAULT_COMPLAINT_TYPES = [
 ]
 
 
+def _pg_error_text(exc):
+    if hasattr(exc, "orig") and exc.orig is not None:
+        return str(exc.orig)
+    return str(exc)
+
+
+def _create_table_safe(table):
+    """Create one table; recover from orphaned PostgreSQL type names."""
+    try:
+        table.create(db.engine, checkfirst=True)
+        return
+    except IntegrityError as exc:
+        db.session.rollback()
+        err = _pg_error_text(exc)
+        if "pg_type_typname_nsp_index" not in err and "already exists" not in err:
+            raise
+
+        inspector = inspect(db.engine)
+        if table.name in inspector.get_table_names():
+            return
+
+        db.session.execute(text(f'DROP TYPE IF EXISTS "{table.name}" CASCADE'))
+        db.session.commit()
+        table.create(db.engine, checkfirst=True)
+
+
+def _ensure_database_schema():
+    """Create schema on fresh DB; on existing DB only add missing tables + columns."""
+    inspector = inspect(db.engine)
+    existing = set(inspector.get_table_names())
+
+    if not existing:
+        db.create_all()
+        db.session.commit()
+        return
+
+    for table in db.metadata.sorted_tables:
+        if table.name in existing:
+            continue
+        _create_table_safe(table)
+    db.session.commit()
+
+
 def _migrate_schema():
     inspector = inspect(db.engine)
     if "admin_users" in inspector.get_table_names():
@@ -152,24 +209,91 @@ def _migrate_schema():
         cols = {c["name"] for c in inspector.get_columns("complaint_details")}
         if "action_type" not in cols:
             db.session.execute(text("ALTER TABLE complaint_details ADD COLUMN action_type VARCHAR(40) DEFAULT 'note'"))
+    if "complaints" in inspector.get_table_names():
+        cols = {c["name"] for c in inspector.get_columns("complaints")}
+        if "assigned_to_code" not in cols:
+            db.session.execute(text("ALTER TABLE complaints ADD COLUMN assigned_to_code VARCHAR(20)"))
+        if "assigned_to_name" not in cols:
+            db.session.execute(text("ALTER TABLE complaints ADD COLUMN assigned_to_name VARCHAR(120)"))
+        if "serial_number" not in cols:
+            db.session.execute(text("ALTER TABLE complaints ADD COLUMN serial_number VARCHAR(24)"))
+            db.session.execute(
+                text(
+                    "UPDATE complaints SET serial_number = 'CMP-' || "
+                    "to_char(complaint_date, 'YYYYMMDD') || '-' || "
+                    "lpad(complaint_id::text, 4, '0') "
+                    "WHERE serial_number IS NULL"
+                )
+            )
+            db.session.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_complaints_serial_number "
+                    "ON complaints (serial_number)"
+                )
+            )
+        db.session.execute(
+            text(
+                "UPDATE complaints SET assigned_to_code = created_by_code, "
+                "assigned_to_name = created_by_name "
+                "WHERE assigned_to_code IS NULL AND created_by_code IS NOT NULL"
+            )
+        )
     db.session.commit()
 
 
 def _ensure_functions():
-    existing = {f.route_name for f in SystemFunction.query.all()}
+    existing = {f.route_name: f for f in SystemFunction.query.all()}
     for fn in DEFAULT_FUNCTIONS:
-        if fn["route_name"] not in existing:
+        row = existing.get(fn["route_name"])
+        if not row:
             db.session.add(SystemFunction(**fn, is_enabled=True))
+        else:
+            row.function_name = fn["function_name"]
+            row.function_name_en = fn["function_name_en"]
+            row.icon = fn["icon"]
+            row.color_hex = fn["color_hex"]
+            row.sort_order = fn["sort_order"]
+            row.is_enabled = True
     db.session.commit()
+
+
+def _dedupe_menu_functions():
+    """Remove duplicate menu rows (same route_name) left from older seeds."""
+    from collections import defaultdict
+
+    grouped = defaultdict(list)
+    for func in SystemFunction.query.order_by(SystemFunction.id).all():
+        grouped[func.route_name].append(func)
+
+    changed = False
+    for funcs in grouped.values():
+        if len(funcs) <= 1:
+            continue
+        keep = funcs[0]
+        for dup in funcs[1:]:
+            for access in UserFunctionAccess.query.filter_by(function_id=dup.id).all():
+                existing = UserFunctionAccess.query.filter_by(
+                    user_id=access.user_id, function_id=keep.id
+                ).first()
+                if existing:
+                    existing.is_visible = existing.is_visible or access.is_visible
+                    db.session.delete(access)
+                else:
+                    access.function_id = keep.id
+            db.session.delete(dup)
+            changed = True
+    if changed:
+        db.session.commit()
 
 
 def init_db():
     app = create_app()
     with app.app_context():
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-        db.create_all()
+        _ensure_database_schema()
         _migrate_schema()
         _ensure_functions()
+        _dedupe_menu_functions()
 
         admin = User.query.filter_by(username="admin").first()
         if not admin:

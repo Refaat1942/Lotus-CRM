@@ -2,44 +2,186 @@
 {% block title %}{{ t('complaints_dashboard') }} - {{ brand }}{% endblock %}
 {% block content %}
 <h1 class="page-title">📊 {{ t('complaints_dashboard') }}</h1>
-<div class="filter-bar form-card">
-    <input type="date" id="from"><input type="date" id="to">
-    <select id="branch"><option value="الكل">{{ t('all_branches') }}</option>
-        {% for b in branches %}<option value="{{ b.branch_code }}">{{ b.branch_name }}</option>{% endfor %}
-    </select>
-    <select id="status"><option value="الكل">{{ t('all_statuses') }}</option>
-        {% for s in statuses %}<option value="{{ s }}">{{ t_status(s) }}</option>{% endfor %}
-    </select>
-    <button class="btn btn-primary" onclick="loadStats()">{{ t('search') }}</button>
+<p class="subtitle">{{ t('dashboard_insights_hint') }}</p>
+
+<div class="filter-bar form-card dashboard-filters">
+    <div class="filter-row">
+        <label>{{ t('from_date') }}</label>
+        <input type="date" id="from">
+        <label>{{ t('to_date') }}</label>
+        <input type="date" id="to">
+    </div>
+    <div class="filter-row">
+        <select id="branch"><option value="الكل">{{ t('all_branches') }}</option>
+            {% for b in branches %}<option value="{{ b.branch_code }}">{{ b.branch_name }}</option>{% endfor %}
+        </select>
+        <select id="status"><option value="الكل">{{ t('all_statuses') }}</option>
+            {% for s in statuses %}<option value="{{ s }}">{{ t_status(s) }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-primary" onclick="loadStats()">{{ t('search') }}</button>
+    </div>
+    <div class="quick-range">
+        <span>{{ t('quick_range') }}:</span>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="setRange('today')">{{ t('today') }}</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="setRange('yesterday')">{{ t('yesterday') }}</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="setRange('week')">{{ t('last_7_days') }}</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="setRange('month')">{{ t('this_month') }}</button>
+    </div>
 </div>
-<div class="chart-container"><canvas id="chart"></canvas></div>
-<div id="stats-table" class="stats-row"></div>
+
+<div class="stats-row dashboard-summary" id="summary-cards"></div>
+
+<div class="dashboard-grid">
+    <section class="panel">
+        <h2 class="panel-title">{{ t('daily_trend') }}</h2>
+        <div class="chart-container"><canvas id="daily-chart"></canvas></div>
+    </section>
+    <section class="panel">
+        <h2 class="panel-title">{{ t('by_status') }}</h2>
+        <div class="chart-container chart-sm"><canvas id="status-chart"></canvas></div>
+        <div id="status-table" class="stats-row compact"></div>
+    </section>
+</div>
+
+<div class="dashboard-grid">
+    <section class="panel">
+        <h2 class="panel-title">{{ t('by_type') }}</h2>
+        <div id="type-table" class="insight-list"></div>
+    </section>
+    <section class="panel">
+        <h2 class="panel-title">{{ t('by_branch') }}</h2>
+        <div id="branch-table" class="insight-list"></div>
+    </section>
+</div>
+
+<section class="panel">
+    <h2 class="panel-title">{{ t('recent_complaints') }}</h2>
+    <table class="data-table" id="recent-table">
+        <thead>
+            <tr>
+                <th>{{ t('complaint_serial') }}</th>
+                <th>{{ t('phone') }}</th>
+                <th>{{ t('customer') }}</th>
+                <th>{{ t('status') }}</th>
+                <th>{{ t('branch') }}</th>
+                <th>{{ t('date') }}</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</section>
 {% endblock %}
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-let chart;
-const today = new Date().toISOString().slice(0,10);
-document.getElementById('from').value = today;
-document.getElementById('to').value = today;
+const STATS_URL = {{ url_for('complaints.dashboard_stats')|tojson }};
+const DETAIL_URL = {{ url_for('complaints.complaint_detail', complaint_id=0)|tojson }}.replace('/0','');
+const LABELS = {
+    total: {{ t('total_complaints')|tojson }},
+    today: {{ t('created_today')|tojson }},
+    open: {{ t('open')|tojson }},
+    progress: {{ t('in_progress')|tojson }},
+    closed: {{ t('closed')|tojson }},
+    details: {{ t('details')|tojson }},
+    noData: {{ t('no_data')|tojson }},
+};
+let dailyChart, statusChart;
+
+function isoDate(d) { return d.toISOString().slice(0, 10); }
+
+function setRange(preset) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let from = new Date(today);
+    let to = new Date(today);
+    if (preset === 'yesterday') {
+        from.setDate(from.getDate() - 1);
+        to = new Date(from);
+    } else if (preset === 'week') {
+        from.setDate(from.getDate() - 6);
+    } else if (preset === 'month') {
+        from = new Date(today.getFullYear(), today.getMonth(), 1);
+    }
+    document.getElementById('from').value = isoDate(from);
+    document.getElementById('to').value = isoDate(to);
+    loadStats();
+}
+
 async function loadStats() {
     const params = new URLSearchParams({
-        from: document.getElementById('from').value, to: document.getElementById('to').value,
-        branch: document.getElementById('branch').value, status: document.getElementById('status').value,
+        from: document.getElementById('from').value,
+        to: document.getElementById('to').value,
+        branch: document.getElementById('branch').value,
+        status: document.getElementById('status').value,
     });
-    const res = await fetch('{{ url_for("complaints.dashboard_stats") }}?' + params);
+    const res = await fetch(STATS_URL + '?' + params);
     const data = await res.json();
-    const labels = data.map(d => d.status_label || d.status);
-    if (chart) chart.destroy();
-    chart = new Chart(document.getElementById('chart'), {
-        type: 'pie',
-        data: { labels, datasets: [{ data: data.map(d=>d.count), backgroundColor: ['#512DA8','#00796b','#E53935','#FB8C00'] }] },
-        options: { responsive: true }
+    const s = data.summary || {};
+
+    document.getElementById('summary-cards').innerHTML = `
+        <div class="stat-card"><span class="stat-value">${s.total || 0}</span><span class="stat-label">${LABELS.total}</span></div>
+        <div class="stat-card highlight"><span class="stat-value">${s.created_today || 0}</span><span class="stat-label">${LABELS.today}</span></div>
+        <div class="stat-card warn"><span class="stat-value">${s.open || 0}</span><span class="stat-label">${LABELS.open}</span></div>
+        <div class="stat-card"><span class="stat-value">${s.in_progress || 0}</span><span class="stat-label">${LABELS.progress}</span></div>
+        <div class="stat-card success"><span class="stat-value">${s.closed || 0}</span><span class="stat-label">${LABELS.closed}</span></div>`;
+
+    const days = data.by_day || [];
+    const dayLabels = days.map(d => d.date.slice(5));
+    const dayCounts = days.map(d => d.count);
+    if (dailyChart) dailyChart.destroy();
+    dailyChart = new Chart(document.getElementById('daily-chart'), {
+        type: 'bar',
+        data: {
+            labels: dayLabels,
+            datasets: [{
+                label: LABELS.total,
+                data: dayCounts,
+                backgroundColor: 'rgba(0, 121, 107, 0.75)',
+                borderRadius: 6,
+            }],
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
     });
-    document.getElementById('stats-table').innerHTML = data.map(d =>
-        `<div class="stat-card"><span class="stat-value">${d.count}</span><span class="stat-label">${d.status_label||d.status}</span></div>`
+
+    const statuses = data.by_status || [];
+    if (statusChart) statusChart.destroy();
+    statusChart = new Chart(document.getElementById('status-chart'), {
+        type: 'doughnut',
+        data: {
+            labels: statuses.map(d => d.status_label || d.status),
+            datasets: [{ data: statuses.map(d => d.count), backgroundColor: ['#512DA8', '#00796b', '#E53935', '#FB8C00'] }],
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+    });
+    document.getElementById('status-table').innerHTML = statuses.map(d =>
+        `<div class="stat-card compact"><span class="stat-value">${d.count}</span><span class="stat-label">${d.status_label || d.status}</span></div>`
     ).join('');
+
+    document.getElementById('type-table').innerHTML = (data.by_type || []).map(d =>
+        `<div class="insight-row"><span>${d.type_label || d.type}</span><strong>${d.count}</strong></div>`
+    ).join('') || `<p class="empty-state">${LABELS.noData}</p>`;
+
+    document.getElementById('branch-table').innerHTML = (data.by_branch || []).map(d =>
+        `<div class="insight-row"><span>${d.branch}</span><strong>${d.count}</strong></div>`
+    ).join('') || `<p class="empty-state">${LABELS.noData}</p>`;
+
+    const recent = data.recent || [];
+    document.querySelector('#recent-table tbody').innerHTML = recent.map(r => `
+        <tr>
+            <td><span class="serial-badge">${r.serial}</span></td>
+            <td>${r.phone}</td>
+            <td>${r.customer || '—'}</td>
+            <td>${r.status_label || r.status}</td>
+            <td>${r.branch}</td>
+            <td>${r.date}</td>
+            <td><a href="${DETAIL_URL}/${r.id}" class="btn btn-sm">${LABELS.details}</a></td>
+        </tr>`).join('') || `<tr><td colspan="7">${LABELS.noData}</td></tr>`;
 }
-loadStats();
+
+setRange('today');
 </script>
 {% endblock %}

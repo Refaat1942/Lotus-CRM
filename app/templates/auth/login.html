@@ -4,10 +4,9 @@
     <div class="login-card">
         <div class="login-header">
             {% if logo_url %}
-            <img src="{{ logo_url }}" alt="{{ brand }}" class="login-logo">
-            {% else %}
-            <span class="logo-fallback login-logo-fallback">🪷</span>
+            <img src="{{ logo_url }}" alt="{{ brand }}" class="login-logo" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
             {% endif %}
+            <span class="logo-fallback login-logo-fallback" {% if logo_url %}hidden{% endif %}>🪷</span>
             <h1>{{ brand }}</h1>
             <p>{{ t('tagline') }}</p>
         </div>

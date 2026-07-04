@@ -13,7 +13,7 @@ from scripts.init_db import DEFAULT_FUNCTIONS, init_db
 def reset_admin(password="admin"):
     app = create_app()
     with app.app_context():
-        db.create_all()
+        init_db()
         admin = User.query.filter_by(username="admin").first()
         if not admin:
             admin = User(username="admin")
@@ -31,7 +31,6 @@ def reset_admin(password="admin"):
         admin.set_password(password)
         admin.is_active = True
         db.session.commit()
-        init_db()
         print(f"Admin password reset. Username: admin  Password: {password}")
 
 

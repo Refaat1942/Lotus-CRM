@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block title %}#{{ complaint.complaint_id }} - {{ brand }}{% endblock %}
+{% block title %}{{ t('complaint_serial') }} {{ t_serial(complaint) }} - {{ brand }}{% endblock %}
 {% block content %}
 <div class="page-header">
     <div>
-        <h1>#{{ complaint.complaint_id }}</h1>
+        <p class="serial-label">{{ t('complaint_serial') }}</p>
+        <h1 class="serial-heading">{{ t_serial(complaint) }}</h1>
         <p class="subtitle">{{ t('complaint_history') }} & {{ t('update_status') }}</p>
     </div>
     <span class="badge badge-lg">{{ t_status(complaint.complaint_status) }}</span>
@@ -18,6 +19,7 @@
             <dt>{{ t('branch') }}</dt><dd>{{ complaint.branch.branch_name if complaint.branch else complaint.branch_code }}</dd>
             <dt>{{ t('complaint_type') }}</dt><dd>{{ type_display }}</dd>
             <dt>{{ t('creator') }}</dt><dd>{{ complaint.created_by_name }}</dd>
+            <dt>{{ t('assigned_agent') }}</dt><dd>{{ complaint.assigned_to_name or t('unassigned') }}</dd>
             <dt>{{ t('shift') }}</dt><dd>{{ t_shift(complaint.shift) }}</dd>
             <dt>{{ t('date') }}</dt><dd>{{ complaint.complaint_date.strftime('%Y-%m-%d %H:%M') }}</dd>
         </dl>
@@ -26,6 +28,19 @@
     </section>
 
     <section class="panel">
+        <h2 class="panel-title">{{ t('assign_complaint') }}</h2>
+        <form method="POST" class="stack-form">
+            <input type="hidden" name="action" value="assign">
+            <select name="assigned_to_code">
+                <option value="">{{ t('unassigned') }}</option>
+                {% for e in agents %}
+                <option value="{{ e.employee_code }}" {{ 'selected' if complaint.assigned_to_code == e.employee_code else '' }}>
+                    {{ e.employee_code }} — {{ e.employee_name }}
+                </option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-secondary">{{ t('assign_agent') }}</button>
+        </form>
         <h2 class="panel-title">{{ t('update_status') }}</h2>
         <form method="POST" class="stack-form">
             <input type="hidden" name="action" value="status">

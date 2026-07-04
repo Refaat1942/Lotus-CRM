@@ -11,7 +11,15 @@
         {% for b in branches %}<option value="{{ b.branch_code }}">{{ b.branch_name }}</option>{% endfor %}
     </select>
     <input type="text" id="phone" placeholder="{{ t('phone') }}">
+    <input type="text" id="serial" placeholder="{{ t('complaint_serial') }}">
     <input type="text" id="creator" placeholder="{{ t('creator') }}">
+    <select id="assigned">
+        <option value="الكل">{{ t('all_agents') }}</option>
+        <option value="unassigned">{{ t('only_unassigned') }}</option>
+        {% for a in agents %}
+        <option value="{{ a.employee_code }}">{{ a.employee_name }}</option>
+        {% endfor %}
+    </select>
     <select id="shift">
         <option value="الكل">{{ t('all') }}</option>
         <option value="Night">{{ t('shift_night') }}</option>
@@ -23,9 +31,9 @@
 <table class="data-table" id="complaints-table">
     <thead>
         <tr>
-            <th>{{ t('complaint_id') }}</th><th>{{ t('phone') }}</th><th>{{ t('customer') }}</th>
+            <th>{{ t('complaint_serial') }}</th><th>{{ t('phone') }}</th><th>{{ t('customer') }}</th>
             <th>{{ t('complaint_type') }}</th><th>{{ t('date') }}</th><th>{{ t('status') }}</th>
-            <th>{{ t('branch') }}</th><th>{{ t('creator') }}</th><th>{{ t('shift') }}</th><th>{{ t('actions') }}</th>
+            <th>{{ t('branch') }}</th><th>{{ t('creator') }}</th><th>{{ t('assigned_agent') }}</th><th>{{ t('shift') }}</th><th>{{ t('actions') }}</th>
         </tr>
     </thead>
     <tbody></tbody>
@@ -46,16 +54,18 @@ async function searchComplaints() {
         status: document.getElementById('status').value,
         branch: document.getElementById('branch').value,
         phone: document.getElementById('phone').value,
+        serial: document.getElementById('serial').value,
         creator: document.getElementById('creator').value,
+        assigned: document.getElementById('assigned').value,
         shift: document.getElementById('shift').value,
     });
     const res = await fetch(SEARCH_URL + '?' + params);
     const rows = await res.json();
     document.querySelector('#complaints-table tbody').innerHTML = rows.map(r => `
         <tr class="${r.alert ? 'alert-row' : ''}">
-            <td>${r.id}</td><td>${r.phone}</td><td>${r.customer}</td><td>${r.type_label||r.type}</td>
+            <td><span class="serial-badge">${r.serial || r.id}</span></td><td>${r.phone}</td><td>${r.customer}</td><td>${r.type_label||r.type}</td>
             <td>${r.date}</td><td>${r.status_label||r.status}</td><td>${r.branch}</td>
-            <td>${r.creator}</td><td>${r.shift_label||r.shift}</td>
+            <td>${r.creator}</td><td>${r.assigned||'—'}</td><td>${r.shift_label||r.shift}</td>
             <td><a href="${DETAIL_URL}/${r.id}" class="btn btn-sm">{{ t('details') }}</a></td>
         </tr>`).join('');
 }

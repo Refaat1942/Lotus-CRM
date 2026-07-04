@@ -4,7 +4,7 @@
 <h1 class="page-title">⚙️ {{ t('admin_panel') }}</h1>
 
 <div class="admin-tabs-nav">
-    <a href="?tab=agents" class="{{ 'active' if request.args.get('tab')=='agents' else '' }}">{{ t('assign_agent') }}</a>
+    <a href="?tab=agents" class="{{ 'active' if request.args.get('tab')=='agents' else '' }}">{{ t('link_users') }}</a>
     <a href="?tab=types" class="{{ 'active' if request.args.get('tab')=='types' else '' }}">{{ t('complaint_types') }}</a>
     <a href="?tab=branches" class="{{ 'active' if request.args.get('tab')=='branches' else '' }}">{{ t('branch_emails') }}</a>
     <a href="?tab=import" class="{{ 'active' if request.args.get('tab')=='import' else '' }}">{{ t('upload_excel') }}</a>
@@ -18,8 +18,8 @@
 
 {% if tab == 'agents' or tab == 'users' %}
 <section class="panel">
-    <h2 class="panel-title">👤 {{ t('assign_agent') }}</h2>
-    <p class="subtitle">{{ t('assign_agent_hint') }}</p>
+    <h2 class="panel-title">👤 {{ t('link_users') }}</h2>
+    <p class="subtitle">{{ t('link_users_hint') }}</p>
     <form method="POST" action="{{ url_for('admin.add_user') }}" class="stack-form panel">
         <h3>{{ t('add_user') }}</h3>
         <div class="form-grid">

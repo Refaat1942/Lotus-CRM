@@ -27,7 +27,7 @@
 <table class="data-table">
     <thead>
         <tr>
-            <th>{{ t('complaint_id') }}</th>
+            <th>{{ t('complaint_serial') }}</th>
             <th>{{ t('complaint_type') }}</th>
             <th>{{ t('status') }}</th>
             <th>{{ t('date') }}</th>
@@ -37,7 +37,7 @@
     <tbody>
     {% for c in complaints %}
     <tr>
-        <td>#{{ c.complaint_id }}</td>
+        <td><span class="serial-badge">{{ t_serial(c) }}</span></td>
         <td>{{ t_type(c.complaint_type) }}</td>
         <td>{{ t_status(c.complaint_status) }}</td>
         <td>{{ c.complaint_date.strftime('%Y-%m-%d %H:%M') }}</td>

@@ -45,12 +45,17 @@ def create_app(config_class=Config):
             translate_shift,
             translate_status,
         )
+        from app.services.complaints import complaint_display_number
 
         lang = session.get("lang", app.config.get("DEFAULT_LANGUAGE", "ar"))
         brand = AppSetting.get("brand_name", "Lotus CRM")
         primary = AppSetting.get("primary_color", "#00796b")
         logo_path = AppSetting.get("logo_path", "")
-        logo_url = url_for("static", filename=logo_path) if logo_path else None
+        logo_url = None
+        if logo_path:
+            abs_logo = os.path.join(app.static_folder, logo_path)
+            if os.path.isfile(abs_logo):
+                logo_url = url_for("static", filename=logo_path)
 
         def t(key):
             return translate(key, lang)
@@ -64,22 +69,17 @@ def create_app(config_class=Config):
             t_status=lambda v: translate_status(v, lang),
             t_type=lambda v: translate_complaint_type(v, lang),
             t_shift=lambda v: translate_shift(v, lang),
+            t_serial=lambda c: complaint_display_number(c),
         )
 
     @app.context_processor
     def inject_nav_access():
-        from flask import session
         from flask_login import current_user
-        from app.services.access import user_can_admin, user_can_view_reports
         from app.services.nav import get_nav_items
 
         if not current_user.is_authenticated:
-            return dict(show_reports=False, show_admin=False, nav_items=[])
-        return dict(
-            show_reports=user_can_view_reports(current_user),
-            show_admin=user_can_admin(current_user),
-            nav_items=get_nav_items(current_user),
-        )
+            return dict(nav_items=[])
+        return dict(nav_items=get_nav_items(current_user))
 
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(app.instance_path, exist_ok=True)

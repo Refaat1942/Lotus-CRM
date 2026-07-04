@@ -5,7 +5,7 @@
 <table class="data-table">
     <thead>
         <tr>
-            <th>{{ t('complaint_id') }}</th>
+            <th>{{ t('complaint_serial') }}</th>
             <th>{{ t('phone') }}</th>
             <th>{{ t('complaint_type') }}</th>
             <th>{{ t('status') }}</th>
@@ -17,7 +17,7 @@
     <tbody>
     {% for c in rows %}
     <tr>
-        <td>#{{ c.complaint_id }}</td>
+        <td><span class="serial-badge">{{ t_serial(c) }}</span></td>
         <td>{{ c.phone_number }}</td>
         <td>{{ t_type(c.complaint_type) }}</td>
         <td>{{ t_status(c.complaint_status) }}</td>

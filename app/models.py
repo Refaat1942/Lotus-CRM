@@ -115,6 +115,7 @@ class Complaint(db.Model):
     __tablename__ = "complaints"
 
     complaint_id = db.Column(db.Integer, primary_key=True)
+    serial_number = db.Column(db.String(24), unique=True, index=True)
     phone_number = db.Column(db.String(30), nullable=False)
     complaint_type = db.Column(db.String(80))
     online_channel = db.Column(db.String(80))
@@ -123,6 +124,8 @@ class Complaint(db.Model):
     complaint_status = db.Column(db.String(40), default="مفتوحة")
     created_by_code = db.Column(db.String(20))
     created_by_name = db.Column(db.String(120))
+    assigned_to_code = db.Column(db.String(20), db.ForeignKey("employees.employee_code"))
+    assigned_to_name = db.Column(db.String(120))
     branch_code = db.Column(db.String(20), db.ForeignKey("branches.branch_code"))
     shift = db.Column(db.String(20))
     last_modified = db.Column(db.DateTime, onupdate=datetime.utcnow)

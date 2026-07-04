@@ -244,10 +244,40 @@ body.lang-en .main-area { margin-left: 260px; }
 body.lang-ar .timeline-item { border-left: none; border-right: 3px solid var(--primary); padding: 0.75rem 1rem 0.75rem 0; margin-left: 0; margin-right: 0.5rem; }
 .timeline-created { border-color: var(--success); }
 .timeline-status { border-color: var(--warning); }
+.timeline-assign { border-color: #6366f1; }
 .timeline-meta { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.35rem; }
 .timeline-body { font-size: 0.95rem; }
 .empty-state { color: var(--muted); padding: 1rem; text-align: center; }
 
+.serial-badge {
+    display: inline-block;
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    font-weight: 700;
+    font-size: 0.92rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--primary) 12%, white);
+    color: var(--primary-dark);
+    letter-spacing: 0.02em;
+}
+.serial-label { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.25rem; }
+.serial-heading { font-family: ui-monospace, 'Cascadia Code', monospace; font-size: 2rem; color: var(--primary-dark); }
+
+.dashboard-filters .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.dashboard-filters label { font-weight: 700; color: var(--muted); font-size: 0.85rem; }
+.quick-range { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+.dashboard-summary { margin-bottom: 1.25rem; }
+.dashboard-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+.chart-container { min-height: 260px; position: relative; }
+.chart-sm { min-height: 220px; }
+.stat-card.highlight { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, white); }
+.stat-card.success { border-color: var(--success); }
+.stats-row.compact .stat-card { min-width: 100px; padding: 0.75rem; }
+.insight-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.insight-row { display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border); }
+.insight-row strong { color: var(--primary-dark); font-size: 1.1rem; }
+
 @media (max-width: 900px) {
     .layout-two-col { grid-template-columns: 1fr; }
+    .dashboard-grid { grid-template-columns: 1fr; }
 }

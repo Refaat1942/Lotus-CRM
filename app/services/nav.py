@@ -8,7 +8,15 @@ def get_nav_items(user):
         UserFunctionAccess.query.filter_by(user_id=user.id, is_visible=True)
         .join(SystemFunction)
         .filter(SystemFunction.is_enabled == True)  # noqa: E712
-        .order_by(SystemFunction.sort_order)
+        .order_by(SystemFunction.sort_order, SystemFunction.id)
         .all()
     )
-    return [row.function for row in rows]
+    seen = set()
+    items = []
+    for row in rows:
+        route = row.function.route_name
+        if route in seen:
+            continue
+        seen.add(route)
+        items.append(row.function)
+    return items

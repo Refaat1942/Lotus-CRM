@@ -8,6 +8,12 @@ from app.extensions import db
 from app.models import Branch, Complaint, ComplaintDetail, ComplaintType, Customer, Employee
 from app.services.audit import log_action
 from app.services.email import send_complaint_notification
+from app.services.complaints import (
+    build_dashboard_overview,
+    complaint_display_number,
+    generate_complaint_serial,
+    my_complaints_filter,
+)
 from app.services.i18n import translate_shift, translate_status
 
 complaints_bp = Blueprint("complaints", __name__)
@@ -47,6 +53,14 @@ def _agent_name():
     return emp.employee_name if emp else current_user.username
 
 
+def _active_agents():
+    return Employee.query.filter_by(is_active=True).order_by(Employee.employee_name).all()
+
+
+def _my_complaints_filter():
+    return my_complaints_filter(current_user)
+
+
 def _add_timeline(complaint_id, modifier, text, action_type="note"):
     db.session.add(
         ComplaintDetail(
@@ -82,8 +96,10 @@ def new_complaint():
         emp = Employee.query.get(emp_code)
         agent_name = emp.employee_name if emp else _agent_name()
         now = datetime.now()
+        serial = generate_complaint_serial(now)
         complaint = Complaint(
             phone_number=phone,
+            serial_number=serial,
             complaint_type=ctype,
             online_channel=channel,
             complaint_text=text,
@@ -91,6 +107,8 @@ def new_complaint():
             complaint_status="مفتوحة",
             created_by_code=emp_code,
             created_by_name=agent_name,
+            assigned_to_code=emp_code,
+            assigned_to_name=agent_name,
             branch_code=branch_code,
             shift=_shift(now),
         )
@@ -99,14 +117,14 @@ def new_complaint():
         _add_timeline(
             complaint.complaint_id,
             agent_name,
-            f"Complaint created — status: مفتوحة",
+            f"Complaint {serial} created — status: مفتوحة",
             "created",
         )
-        log_action("complaint.create", "complaint", complaint.complaint_id, f"phone={phone}")
+        log_action("complaint.create", "complaint", complaint.complaint_id, f"{serial} phone={phone}")
 
         try:
             body = (
-                f"Agent   : {agent_name}\nPhone   : {phone}\nType    : {ctype}\n"
+                f"Serial  : {serial}\nAgent   : {agent_name}\nPhone   : {phone}\nType    : {ctype}\n"
                 f"Branch  : {branch_code}\nShift   : {complaint.shift}\n\nText:\n{text}"
             )
             send_complaint_notification(branch_code, body)
@@ -114,7 +132,7 @@ def new_complaint():
             flash("email_failed", "warning")
 
         db.session.commit()
-        flash("complaint_saved", "success")
+        flash(f"serial:{serial}", "success")
         return redirect(url_for("complaints.complaint_detail", complaint_id=complaint.complaint_id))
 
     return render_template(
@@ -145,7 +163,10 @@ def lookup_customer(phone):
 @feature_required("complaints.list_complaints")
 def list_complaints():
     branches = Branch.query.order_by(Branch.branch_name).all()
-    return render_template("complaints/list.html", branches=branches, statuses=STATUSES)
+    agents = _active_agents()
+    return render_template(
+        "complaints/list.html", branches=branches, statuses=STATUSES, agents=agents
+    )
 
 
 @complaints_bp.route("/api/search")
@@ -157,7 +178,9 @@ def search_complaints():
     date_to = request.args.get("to")
     status = request.args.get("status", "الكل")
     phone = request.args.get("phone", "").strip()
+    serial = request.args.get("serial", "").strip()
     creator = request.args.get("creator", "").strip()
+    assigned = request.args.get("assigned", "الكل")
     shift = request.args.get("shift", "الكل")
     branch = request.args.get("branch", "الكل")
 
@@ -173,8 +196,14 @@ def search_complaints():
         q = q.filter(Complaint.complaint_status == status)
     if phone:
         q = q.filter(Complaint.phone_number.contains(phone))
+    if serial:
+        q = q.filter(Complaint.serial_number.ilike(f"%{serial}%"))
     if creator:
         q = q.filter(Complaint.created_by_name.contains(creator))
+    if assigned == "unassigned":
+        q = q.filter(Complaint.assigned_to_code.is_(None))
+    elif assigned and assigned not in ("الكل", "all", ""):
+        q = q.filter(Complaint.assigned_to_code == assigned)
     if shift and shift != "الكل":
         q = q.filter(Complaint.shift == shift)
     if branch and branch != "الكل":
@@ -191,6 +220,7 @@ def search_complaints():
         result.append(
             {
                 "id": c.complaint_id,
+                "serial": complaint_display_number(c),
                 "phone": c.phone_number,
                 "customer": cust_name,
                 "type_label": type_map.get(c.complaint_type, c.complaint_type),
@@ -198,6 +228,7 @@ def search_complaints():
                 "status_label": translate_status(c.complaint_status, lang),
                 "branch": c.branch.branch_name if c.branch else c.branch_code,
                 "creator": c.created_by_name,
+                "assigned": c.assigned_to_name or "",
                 "shift_label": translate_shift(c.shift, lang),
                 "alert": alert,
             }
@@ -233,6 +264,44 @@ def complaint_detail(complaint_id):
             if note:
                 _add_timeline(complaint_id, modifier, note, "note")
                 log_action("complaint.note", "complaint", complaint_id, note[:200])
+        elif action == "assign":
+            emp_code = request.form.get("assigned_to_code", "").strip()
+            if emp_code:
+                emp = Employee.query.get(emp_code)
+                if emp:
+                    old_name = complaint.assigned_to_name or "—"
+                    complaint.assigned_to_code = emp.employee_code
+                    complaint.assigned_to_name = emp.employee_name
+                    complaint.last_modified = datetime.utcnow()
+                    _add_timeline(
+                        complaint_id,
+                        modifier,
+                        f"Assigned to: {emp.employee_name}",
+                        "assign",
+                    )
+                    log_action(
+                        "complaint.assign",
+                        "complaint",
+                        complaint_id,
+                        f"{old_name} → {emp.employee_name}",
+                    )
+            else:
+                old_name = complaint.assigned_to_name
+                complaint.assigned_to_code = None
+                complaint.assigned_to_name = None
+                complaint.last_modified = datetime.utcnow()
+                _add_timeline(
+                    complaint_id,
+                    modifier,
+                    "Assignment cleared — unassigned",
+                    "assign",
+                )
+                log_action(
+                    "complaint.assign",
+                    "complaint",
+                    complaint_id,
+                    f"{old_name or '—'} → unassigned",
+                )
         db.session.commit()
         flash("updated", "success")
         return redirect(url_for("complaints.complaint_detail", complaint_id=complaint_id))
@@ -252,6 +321,7 @@ def complaint_detail(complaint_id):
         timeline=timeline,
         type_display=type_display,
         statuses=STATUSES,
+        agents=_active_agents(),
     )
 
 
@@ -263,7 +333,7 @@ def my_complaints():
     name = _agent_name()
     rows = (
         Complaint.query.filter(
-            Complaint.created_by_name == name,
+            _my_complaints_filter(),
             Complaint.complaint_date >= today_start,
         )
         .order_by(Complaint.complaint_date.desc())
@@ -284,8 +354,25 @@ def dashboard():
 @login_required
 @feature_required("complaints.dashboard")
 def dashboard_stats():
+    lang = session.get("lang", "ar")
+    data = build_dashboard_overview(
+        request.args.get("from"),
+        request.args.get("to"),
+        request.args.get("branch", "الكل"),
+        request.args.get("status", "الكل"),
+        lang,
+    )
+    return jsonify(data)
+
+
+@complaints_bp.route("/api/dashboard-status")
+@login_required
+@feature_required("complaints.dashboard")
+def dashboard_status_legacy():
+    """Legacy status-only breakdown for older clients."""
     from sqlalchemy import func
 
+    lang = session.get("lang", "ar")
     date_from = request.args.get("from")
     date_to = request.args.get("to")
     branch = request.args.get("branch", "الكل")
@@ -304,12 +391,12 @@ def dashboard_stats():
     if status and status != "الكل":
         q = q.filter(Complaint.complaint_status == status)
     q = q.group_by(Complaint.complaint_status)
-    lang = session.get("lang", "ar")
-    data = [
-        {"status": r[0], "status_label": translate_status(r[0], lang), "count": r[1]}
-        for r in q.all()
-    ]
-    return jsonify(data)
+    return jsonify(
+        [
+            {"status": r[0], "status_label": translate_status(r[0], lang), "count": r[1]}
+            for r in q.all()
+        ]
+    )
 
 
 @complaints_bp.route("/branch-dashboard")

@@ -15,7 +15,10 @@
 <div class="app-shell">
     <aside class="sidebar">
         <div class="sidebar-brand">
-            {% if logo_url %}<img src="{{ logo_url }}" alt="{{ brand }}" class="sidebar-logo">{% else %}<span class="logo-fallback">🪷</span>{% endif %}
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="{{ brand }}" class="sidebar-logo" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+            {% endif %}
+            <span class="logo-fallback" {% if logo_url %}hidden{% endif %}>🪷</span>
             <div><strong>{{ brand }}</strong><small>{{ t('tagline') }}</small></div>
         </div>
         <nav class="sidebar-nav">
@@ -25,13 +28,6 @@
                 <span class="sidebar-icon">{{ item.icon }}</span>{{ label }}
             </a>
             {% endfor %}
-            {% if show_reports %}
-            <a href="{{ url_for('reports.index') }}" class="sidebar-link"><span class="sidebar-icon">📈</span>{{ t('reports') }}</a>
-            {% endif %}
-            {% if show_admin %}
-            <a href="{{ url_for('admin.index') }}" class="sidebar-link"><span class="sidebar-icon">⚙️</span>{{ t('admin_panel') }}</a>
-            <a href="{{ url_for('admin.audit_logs') }}" class="sidebar-link"><span class="sidebar-icon">📜</span>{{ t('audit_logs') }}</a>
-            {% endif %}
         </nav>
         <div class="sidebar-footer">
             <div class="lang-toggle">
@@ -48,7 +44,13 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <div class="flash-messages page-content">{% for category, message in messages %}
-            <div class="flash flash-{{ category }}">{{ t(message) }}</div>
+            <div class="flash flash-{{ category }}">
+                {% if message.startswith('serial:') %}
+                {{ t('complaint_saved') }} — <span class="serial-badge">{{ message[7:] }}</span>
+                {% else %}
+                {{ t(message) }}
+                {% endif %}
+            </div>
         {% endfor %}</div>
         {% endif %}
         {% endwith %}

@@ -371,7 +371,7 @@ def save_branch_emails():
 
 @admin_bp.route("/audit")
 @login_required
-@feature_required("admin.index")
+@feature_required("admin.audit_logs")
 @permission_required("can_manage_users")
 def audit_logs():
     user_filter = request.args.get("user", "")
