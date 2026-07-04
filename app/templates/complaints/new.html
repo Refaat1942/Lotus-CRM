@@ -61,6 +61,14 @@
                 {% for ch in online_channels %}<option value="{{ ch }}">{{ ch }}</option>{% endfor %}
             </select>
         </div>
+        <div class="form-group">
+            <label>{{ t('urgency') }}</label>
+            <select name="urgency" required>
+                {% for u in urgencies %}
+                <option value="{{ u }}" {{ 'selected' if u=='متوسطة' else '' }}>{{ t_urgency(u) }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <div class="form-group full-width">
             <label>{{ t('complaint_text') }}</label>
             <textarea name="complaint_text" rows="5" required></textarea>

@@ -2,17 +2,11 @@
 {% block title %}{{ t('customers_report') }} - {{ brand }}{% endblock %}
 {% block content %}
 <h1 class="page-title">{{ t('customers_report') }}</h1>
-<div class="filter-bar">
-    <a href="?export=excel" class="btn btn-secondary">{{ t('export_excel') }}</a>
-</div>
-<table class="data-table">
-    <thead><tr>{% for k in rows[0].keys() if rows %}<th>{{ k }}</th>{% endfor %}</tr></thead>
-    <tbody>
-    {% for r in rows %}
-    <tr>{% for v in r.values() %}<td>{{ v }}</td>{% endfor %}</tr>
-    {% else %}
-    <tr><td colspan="5">{{ t('no_data') }}</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
+<form class="filter-bar form-card" method="GET">
+    <input type="text" name="phone" value="{{ request.args.get('phone','') }}" placeholder="{{ t('phone') }}">
+    <input type="text" name="city" value="{{ request.args.get('city','') }}" placeholder="{{ t('city') }}">
+    <button type="submit" class="btn btn-primary">{{ t('search') }}</button>
+    <a href="?phone={{ request.args.get('phone','') }}&city={{ request.args.get('city','') }}&export=excel" class="btn btn-secondary">{{ t('export_excel') }}</a>
+</form>
+{% include 'reports/_table.html' %}
 {% endblock %}

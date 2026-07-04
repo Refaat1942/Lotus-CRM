@@ -18,6 +18,7 @@
             <dt>{{ t('customer') }}</dt><dd>{% if customer %}{{ customer.first_name }} {{ customer.last_name }}{% else %}—{% endif %}</dd>
             <dt>{{ t('branch') }}</dt><dd>{{ complaint.branch.branch_name if complaint.branch else complaint.branch_code }}</dd>
             <dt>{{ t('complaint_type') }}</dt><dd>{{ type_display }}</dd>
+            <dt>{{ t('urgency') }}</dt><dd><span class="urgency-badge urgency-{{ complaint.urgency or 'متوسطة' }}">{{ t_urgency(complaint.urgency or 'متوسطة') }}</span></dd>
             <dt>{{ t('creator') }}</dt><dd>{{ complaint.created_by_name }}</dd>
             <dt>{{ t('assigned_agent') }}</dt><dd>{{ complaint.assigned_to_name or t('unassigned') }}</dd>
             <dt>{{ t('shift') }}</dt><dd>{{ t_shift(complaint.shift) }}</dd>
@@ -40,6 +41,16 @@
                 {% endfor %}
             </select>
             <button type="submit" class="btn btn-secondary">{{ t('assign_agent') }}</button>
+        </form>
+        <h2 class="panel-title">{{ t('urgency') }}</h2>
+        <form method="POST" class="stack-form">
+            <input type="hidden" name="action" value="urgency">
+            <select name="urgency">
+                {% for u in urgencies %}
+                <option value="{{ u }}" {{ 'selected' if (complaint.urgency or 'متوسطة')==u else '' }}>{{ t_urgency(u) }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-secondary">{{ t('save') }}</button>
         </form>
         <h2 class="panel-title">{{ t('update_status') }}</h2>
         <form method="POST" class="stack-form">

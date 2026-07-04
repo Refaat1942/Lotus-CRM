@@ -1,13 +1,33 @@
 {% extends "base.html" %}
 {% block title %}{{ t('reports') }} - {{ brand }}{% endblock %}
 {% block content %}
-<h1 class="page-title">📊 {{ t('reports') }}</h1>
+<h1 class="page-title">📈 {{ t('reports') }}</h1>
+<p class="subtitle">{{ t('reports_hub_hint') }}</p>
+
+<h2 class="report-section-title">{{ t('nav_group_complaints') }}</h2>
 <div class="feature-grid">
-    <a href="{{ url_for('reports.complaints_report') }}" class="feature-card" style="--card-color:#0288d1">
+    <a href="{{ url_for('reports.complaints_report') }}" class="feature-card" style="--card-color:#7b1fa2">
         <span class="feature-icon">📋</span><span class="feature-name">{{ t('complaints_report') }}</span>
     </a>
+    <a href="{{ url_for('reports.agents_report') }}" class="feature-card" style="--card-color:#00897b">
+        <span class="feature-icon">👤</span><span class="feature-name">{{ t('agents_report') }}</span>
+    </a>
+    <a href="{{ url_for('reports.summary_report') }}" class="feature-card" style="--card-color:#512da8">
+        <span class="feature-icon">📊</span><span class="feature-name">{{ t('summary_report') }}</span>
+    </a>
+</div>
+
+<h2 class="report-section-title">{{ t('nav_group_customers') }}</h2>
+<div class="feature-grid">
     <a href="{{ url_for('reports.customers_report') }}" class="feature-card" style="--card-color:#43a047">
         <span class="feature-icon">👥</span><span class="feature-name">{{ t('customers_report') }}</span>
+    </a>
+</div>
+
+<h2 class="report-section-title">{{ t('nav_group_admin') }}</h2>
+<div class="feature-grid">
+    <a href="{{ url_for('reports.audit_report') }}" class="feature-card" style="--card-color:#546e7a">
+        <span class="feature-icon">📜</span><span class="feature-name">{{ t('audit_report') }}</span>
     </a>
 </div>
 {% endblock %}

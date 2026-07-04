@@ -28,12 +28,12 @@ from app.services.access import ROLE_ADMIN, apply_role_features, sync_new_functi
 
 DEFAULT_FUNCTIONS = [
     {
-        "function_name": "لوحة الوكيل",
-        "function_name_en": "Agent Dashboard",
+        "function_name": "مكتبي",
+        "function_name_en": "My Work Desk",
         "route_name": "main.agent_home",
         "icon": "🏠",
         "color_hex": "#00796B",
-        "sort_order": 0,
+        "sort_order": 1,
     },
     {
         "function_name": "تسجيل شكوى",
@@ -41,7 +41,7 @@ DEFAULT_FUNCTIONS = [
         "route_name": "complaints.new_complaint",
         "icon": "📝",
         "color_hex": "#4CAF50",
-        "sort_order": 1,
+        "sort_order": 10,
     },
     {
         "function_name": "جميع الشكاوى",
@@ -49,7 +49,7 @@ DEFAULT_FUNCTIONS = [
         "route_name": "complaints.list_complaints",
         "icon": "📋",
         "color_hex": "#7B1FA2",
-        "sort_order": 2,
+        "sort_order": 11,
     },
     {
         "function_name": "شكاوىي اليوم",
@@ -57,7 +57,7 @@ DEFAULT_FUNCTIONS = [
         "route_name": "complaints.my_complaints",
         "icon": "📌",
         "color_hex": "#00897B",
-        "sort_order": 3,
+        "sort_order": 12,
     },
     {
         "function_name": "بحث عميل",
@@ -65,7 +65,7 @@ DEFAULT_FUNCTIONS = [
         "route_name": "customers.search",
         "icon": "🔍",
         "color_hex": "#0288D1",
-        "sort_order": 4,
+        "sort_order": 20,
     },
     {
         "function_name": "إضافة عميل",
@@ -73,15 +73,7 @@ DEFAULT_FUNCTIONS = [
         "route_name": "customers.add",
         "icon": "👤",
         "color_hex": "#0097A7",
-        "sort_order": 5,
-    },
-    {
-        "function_name": "قاعدة المعرفة",
-        "function_name_en": "Knowledge Base",
-        "route_name": "knowledge.index",
-        "icon": "💊",
-        "color_hex": "#00695C",
-        "sort_order": 6,
+        "sort_order": 21,
     },
     {
         "function_name": "لوحة عامة",
@@ -89,15 +81,7 @@ DEFAULT_FUNCTIONS = [
         "route_name": "complaints.dashboard",
         "icon": "📊",
         "color_hex": "#512DA8",
-        "sort_order": 7,
-    },
-    {
-        "function_name": "لوحة الفروع",
-        "function_name_en": "Branch Dashboard",
-        "route_name": "complaints.branch_dashboard",
-        "icon": "🏢",
-        "color_hex": "#3949AB",
-        "sort_order": 8,
+        "sort_order": 30,
     },
     {
         "function_name": "التقارير",
@@ -105,15 +89,23 @@ DEFAULT_FUNCTIONS = [
         "route_name": "reports.index",
         "icon": "📈",
         "color_hex": "#5E35B1",
-        "sort_order": 9,
+        "sort_order": 31,
+    },
+    {
+        "function_name": "مراقبة مباشرة",
+        "function_name_en": "Live Monitor",
+        "route_name": "admin.live_monitor",
+        "icon": "📡",
+        "color_hex": "#D32F2F",
+        "sort_order": 40,
     },
     {
         "function_name": "لوحة الإدارة",
-        "function_name_en": "Admin Panel",
+        "function_name_en": "Admin Settings",
         "route_name": "admin.index",
         "icon": "⚙️",
         "color_hex": "#455A64",
-        "sort_order": 10,
+        "sort_order": 41,
     },
     {
         "function_name": "سجل التدقيق",
@@ -121,7 +113,7 @@ DEFAULT_FUNCTIONS = [
         "route_name": "admin.audit_logs",
         "icon": "📜",
         "color_hex": "#546E7A",
-        "sort_order": 11,
+        "sort_order": 42,
     },
 ]
 
@@ -210,6 +202,8 @@ def _migrate_schema():
         db.session.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS assigned_to_code VARCHAR(20)"))
         db.session.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS assigned_to_name VARCHAR(120)"))
         db.session.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS serial_number VARCHAR(24)"))
+        db.session.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS urgency VARCHAR(20) DEFAULT 'متوسطة'"))
+        db.session.execute(text("UPDATE complaints SET urgency = 'متوسطة' WHERE urgency IS NULL"))
         db.session.execute(
             text(
                 "UPDATE complaints SET serial_number = 'CMP-' || "
@@ -231,6 +225,8 @@ def _migrate_schema():
                 "WHERE assigned_to_code IS NULL AND created_by_code IS NOT NULL"
             )
         )
+    if "branches" in tables:
+        db.session.execute(text("ALTER TABLE branches ADD COLUMN IF NOT EXISTS owner_email VARCHAR(200)"))
     try:
         db.session.commit()
     except ProgrammingError:
@@ -251,6 +247,20 @@ def _ensure_functions():
             row.color_hex = fn["color_hex"]
             row.sort_order = fn["sort_order"]
             row.is_enabled = True
+    db.session.commit()
+
+
+def _disable_legacy_modules():
+    """Turn off removed modules (knowledge base) for all users."""
+    from app.models import SystemFunction, UserFunctionAccess
+
+    legacy_routes = ("knowledge.index", "complaints.branch_dashboard")
+    for route in legacy_routes:
+        func = SystemFunction.query.filter_by(route_name=route).first()
+        if not func:
+            continue
+        func.is_enabled = False
+        UserFunctionAccess.query.filter_by(function_id=func.id).update({"is_visible": False})
     db.session.commit()
 
 
@@ -290,6 +300,7 @@ def init_db():
         _ensure_database_schema()
         _migrate_schema()
         _ensure_functions()
+        _disable_legacy_modules()
         _dedupe_menu_functions()
 
         admin = User.query.filter_by(username="admin").first()
@@ -345,6 +356,9 @@ def init_db():
             "smtp_port": "587",
             "use_graph_api": "0",
             "logo_path": "",
+            "notify_stale_hours": "24",
+            "notify_immediate": "1",
+            "notify_assigned_only": "0",
         }
         for key, val in defaults.items():
             if not AppSetting.query.filter_by(key=key).first():

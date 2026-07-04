@@ -38,12 +38,12 @@
         <button type="submit" class="btn btn-primary">{{ t('add_user') }}</button>
     </form>
     <table class="data-table">
-        <thead><tr><th>{{ t('username') }}</th><th>{{ t('role') }}</th><th>{{ t('employee') }}</th><th>{{ t('actions') }}</th></tr></thead>
+        <thead><tr><th>{{ t('username') }}</th><th>{{ t('role') }} / {{ t('employee') }}</th><th>{{ t('account_status') }}</th><th>{{ t('actions') }}</th></tr></thead>
         <tbody>
         {% for u in users %}
         <tr>
             <td>{{ u.username }}</td>
-            <td colspan="2">
+            <td>
                 <form method="POST" action="{{ url_for('admin.update_user_role', user_id=u.id) }}" class="inline-form">
                     <select name="role">
                         <option value="agent" {{ 'selected' if u.role=='agent' else '' }}>{{ t('role_agent') }}</option>
@@ -57,15 +57,32 @@
                     <button type="submit" class="btn btn-sm btn-primary">{{ t('save') }}</button>
                 </form>
             </td>
-            <td>{% if u.username != 'admin' %}
+            <td>
+                {% if u.is_active %}<span class="badge badge-success">{{ t('active') }}</span>
+                {% else %}<span class="badge badge-danger">{{ t('blocked') }}</span>{% endif %}
+            </td>
+            <td>
+                {% if u.username != 'admin' %}
+                <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=u.id) }}" class="inline-form">
+                    <button type="submit" class="btn btn-sm btn-secondary">{{ t('unblock_user') if not u.is_active else t('block_user') }}</button>
+                </form>
                 <form method="POST" action="{{ url_for('admin.delete_user', user_id=u.id) }}" onsubmit="return confirm('{{ t('confirm_delete') }}')">
                     <button type="submit" class="btn btn-danger btn-sm">{{ t('delete') }}</button>
-                </form>{% endif %}
+                </form>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
         </tbody>
     </table>
+    <div class="perm-legend panel-sub">
+        <strong>{{ t('permissions_legend') }}:</strong>
+        <ul class="perm-list">
+            <li><strong>{{ t('role_agent') }}</strong> — {{ t('role_agent_desc') }}</li>
+            <li><strong>{{ t('role_supervisor') }}</strong> — {{ t('role_supervisor_desc') }}</li>
+            <li><strong>{{ t('role_admin') }}</strong> — {{ t('role_admin_desc') }}</li>
+        </ul>
+    </div>
 </section>
 {% elif tab == 'types' %}
 <section class="panel">
@@ -103,8 +120,9 @@
         <strong>{{ b.branch_code }}</strong>
         <input name="branch_name" value="{{ b.branch_name }}" placeholder="{{ t('branch') }}">
         <input name="branch_manager_email" value="{{ b.branch_manager_email or '' }}" placeholder="TO — {{ t('employee') }}">
-        <input name="area_manager_email" value="{{ b.area_manager_email or '' }}" placeholder="CC 1">
-        <input name="sales_manager_email" value="{{ b.sales_manager_email or '' }}" placeholder="CC 2">
+        <input name="area_manager_email" value="{{ b.area_manager_email or '' }}" placeholder="CC — {{ t('employee') }} 1">
+        <input name="sales_manager_email" value="{{ b.sales_manager_email or '' }}" placeholder="CC — {{ t('employee') }} 2">
+        <input name="owner_email" value="{{ b.owner_email or '' }}" placeholder="{{ t('owner_email') }}">
         <button type="submit" class="btn btn-sm btn-primary">{{ t('save') }}</button>
     </form>
     {% endfor %}
@@ -145,11 +163,13 @@
 {% elif tab == 'access' %}
 <section class="admin-section form-card">
     <h2>{{ t('feature_access') }}</h2>
+    <p class="subtitle">{{ t('permissions_legend') }}:
+        {{ t('perm_reports_desc') }} · {{ t('perm_users_desc') }} · {{ t('perm_excel_desc') }}</p>
     <table class="data-table access-table">
         <thead><tr><th>{{ t('username') }}</th><th>{{ t('features') }}</th><th>{{ t('visible') }}</th><th>{{ t('actions') }}</th></tr></thead>
         <tbody>
         {% for u in users %}
-        {% for f in functions if f.is_enabled %}
+        {% for f in functions if f.is_enabled and f.route_name not in ['knowledge.index', 'complaints.branch_dashboard'] %}
         <tr>
             <td>{{ u.username }}</td>
             <td>{{ f.function_name if lang=='ar' else (f.function_name_en or f.function_name) }}</td>
@@ -170,6 +190,16 @@
 </section>
 {% elif tab == 'settings' %}
 <section class="admin-section form-card">
+    <h2>{{ t('notify_settings') }}</h2>
+    <form method="POST" action="{{ url_for('admin.save_settings') }}">
+        <div class="form-grid">
+            <div class="form-group"><label>{{ t('notify_stale_hours') }}</label><input name="notify_stale_hours" type="number" min="1" value="{{ settings.notify_stale_hours }}"></div>
+            <div class="form-group full-width"><label><input type="checkbox" name="notify_immediate" {{ 'checked' if settings.notify_immediate=='1' else '' }}> {{ t('notify_immediate_label') }}</label></div>
+            <div class="form-group full-width"><label><input type="checkbox" name="notify_assigned_only" {{ 'checked' if settings.notify_assigned_only=='1' else '' }}> {{ t('notify_assigned_only_label') }}</label></div>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
+    </form>
+    <hr>
     <h2>{{ t('email_settings') }}</h2>
     <form method="POST" action="{{ url_for('admin.save_settings') }}">
         <div class="form-grid">

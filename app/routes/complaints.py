@@ -14,12 +14,13 @@ from app.services.complaints import (
     generate_complaint_serial,
     my_complaints_filter,
 )
-from app.services.i18n import translate_shift, translate_status
+from app.services.i18n import translate_shift, translate_status, translate_urgency
 
 complaints_bp = Blueprint("complaints", __name__)
 
 ONLINE_CHANNELS = ["Instashop", "Talabat", "Chefaa", "Website", "Lotus Pharmacies App"]
 STATUSES = ["مفتوحة", "جاري الحل", "مغلقة"]
+URGENCIES = ["ضعيفة", "متوسطة", "فورية"]
 
 
 def _active_types():
@@ -88,6 +89,9 @@ def new_complaint():
         ctype = request.form.get("complaint_type")
         text = request.form.get("complaint_text", "").strip()
         channel = request.form.get("online_channel") if _type_requires_online(ctype) else None
+        urgency = request.form.get("urgency", "متوسطة")
+        if urgency not in URGENCIES:
+            urgency = "متوسطة"
 
         if not all([emp_code, branch_code, phone, text, ctype]):
             flash("required_fields", "error")
@@ -105,6 +109,7 @@ def new_complaint():
             complaint_text=text,
             complaint_date=now,
             complaint_status="مفتوحة",
+            urgency=urgency,
             created_by_code=emp_code,
             created_by_name=agent_name,
             assigned_to_code=emp_code,
@@ -125,7 +130,7 @@ def new_complaint():
         try:
             body = (
                 f"Serial  : {serial}\nAgent   : {agent_name}\nPhone   : {phone}\nType    : {ctype}\n"
-                f"Branch  : {branch_code}\nShift   : {complaint.shift}\n\nText:\n{text}"
+                f"Urgency : {urgency}\nBranch  : {branch_code}\nShift   : {complaint.shift}\n\nText:\n{text}"
             )
             send_complaint_notification(branch_code, body)
         except Exception:
@@ -143,6 +148,7 @@ def new_complaint():
         agent=agent,
         prefill_phone=prefill_phone,
         lang=session.get("lang", "ar"),
+        urgencies=URGENCIES,
     )
 
 
@@ -229,6 +235,8 @@ def search_complaints():
                 "branch": c.branch.branch_name if c.branch else c.branch_code,
                 "creator": c.created_by_name,
                 "assigned": c.assigned_to_name or "",
+                "urgency": c.urgency or "متوسطة",
+                "urgency_label": translate_urgency(c.urgency or "متوسطة", lang),
                 "shift_label": translate_shift(c.shift, lang),
                 "alert": alert,
             }
@@ -302,6 +310,19 @@ def complaint_detail(complaint_id):
                     complaint_id,
                     f"{old_name or '—'} → unassigned",
                 )
+        elif action == "urgency":
+            new_u = request.form.get("urgency", complaint.urgency)
+            if new_u in URGENCIES and new_u != complaint.urgency:
+                old_u = complaint.urgency
+                complaint.urgency = new_u
+                complaint.last_modified = datetime.utcnow()
+                _add_timeline(
+                    complaint_id,
+                    modifier,
+                    f"Urgency changed: {old_u} → {new_u}",
+                    "status",
+                )
+                log_action("complaint.urgency", "complaint", complaint_id, f"{old_u} → {new_u}")
         db.session.commit()
         flash("updated", "success")
         return redirect(url_for("complaints.complaint_detail", complaint_id=complaint_id))
@@ -321,6 +342,7 @@ def complaint_detail(complaint_id):
         timeline=timeline,
         type_display=type_display,
         statuses=STATUSES,
+        urgencies=URGENCIES,
         agents=_active_agents(),
     )
 

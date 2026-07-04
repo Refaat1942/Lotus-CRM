@@ -44,6 +44,7 @@ def create_app(config_class=Config):
             translate_complaint_type,
             translate_shift,
             translate_status,
+            translate_urgency,
         )
         from app.services.complaints import complaint_display_number
 
@@ -70,16 +71,28 @@ def create_app(config_class=Config):
             t_type=lambda v: translate_complaint_type(v, lang),
             t_shift=lambda v: translate_shift(v, lang),
             t_serial=lambda c: complaint_display_number(c),
+            t_urgency=lambda v: translate_urgency(v, lang),
         )
 
     @app.context_processor
     def inject_nav_access():
+        from flask import session
         from flask_login import current_user
-        from app.services.nav import get_nav_items
+        from app.services.access import user_can_admin
+        from app.services.nav import get_nav_groups
 
         if not current_user.is_authenticated:
-            return dict(nav_items=[])
-        return dict(nav_items=get_nav_items(current_user))
+            return dict(nav_groups=[], nav_items=[], can_admin=False)
+        lang = session.get("lang", app.config.get("DEFAULT_LANGUAGE", "ar"))
+        groups = get_nav_groups(current_user, lang)
+        flat = []
+        for g in groups:
+            flat.extend(g["items"])
+        return dict(
+            nav_groups=groups,
+            nav_items=flat,
+            can_admin=user_can_admin(current_user),
+        )
 
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(app.instance_path, exist_ok=True)

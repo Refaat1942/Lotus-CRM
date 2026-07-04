@@ -6,10 +6,12 @@ from flask import (
     Blueprint,
     current_app,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
     send_file,
+    session,
     url_for,
 )
 from flask_login import login_required
@@ -21,6 +23,7 @@ from app.extensions import db
 from app.models import AppSetting, AuditLog, Branch, ComplaintType, Employee, SystemFunction, User, UserFunctionAccess, UserPermission
 from app.services.access import ROLE_ADMIN, ROLE_AGENT, ROLE_SUPERVISOR, apply_role_features
 from app.services.audit import log_action
+from app.services.live_monitor import build_live_feed
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -41,6 +44,9 @@ def _settings_dict():
         "graph_client_id": AppSetting.get("graph_client_id", ""),
         "graph_client_secret": AppSetting.get("graph_client_secret", ""),
         "logo_path": AppSetting.get("logo_path", ""),
+        "notify_stale_hours": AppSetting.get("notify_stale_hours", "24"),
+        "notify_immediate": AppSetting.get("notify_immediate", "1"),
+        "notify_assigned_only": AppSetting.get("notify_assigned_only", "0"),
     }
 
 
@@ -122,6 +128,27 @@ def delete_user(user_id):
     return redirect(url_for("admin.index"))
 
 
+@admin_bp.route("/users/<int:user_id>/toggle-active", methods=["POST"])
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def toggle_user_active(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.username == "admin":
+        flash("access_denied", "error")
+        return redirect(url_for("admin.index"))
+    user.is_active = not user.is_active
+    log_action(
+        "user.block" if not user.is_active else "user.unblock",
+        "user",
+        user.id,
+        user.username,
+    )
+    db.session.commit()
+    flash("user_blocked" if not user.is_active else "user_unblocked", "success")
+    return redirect(url_for("admin.index"))
+
+
 @admin_bp.route("/users/<int:user_id>/role", methods=["POST"])
 @login_required
 @feature_required("admin.index")
@@ -190,12 +217,15 @@ def save_settings():
         "brand_name", "primary_color", "notification_email",
         "smtp_host", "smtp_port", "smtp_user", "smtp_password",
         "graph_tenant_id", "graph_client_id", "graph_client_secret",
+        "notify_stale_hours", "notify_immediate", "notify_assigned_only",
     ]
     for key in keys:
         val = request.form.get(key, "")
         if val or key not in ("smtp_password", "graph_client_secret"):
             AppSetting.set(key, val)
     AppSetting.set("use_graph_api", "1" if request.form.get("use_graph_api") else "0")
+    AppSetting.set("notify_immediate", "1" if request.form.get("notify_immediate") else "0")
+    AppSetting.set("notify_assigned_only", "1" if request.form.get("notify_assigned_only") else "0")
     flash("settings_saved", "success")
     return redirect(url_for("admin.index", tab="settings"))
 
@@ -363,10 +393,28 @@ def save_branch_emails():
     branch.branch_manager_email = request.form.get("branch_manager_email", "").strip()
     branch.area_manager_email = request.form.get("area_manager_email", "").strip()
     branch.sales_manager_email = request.form.get("sales_manager_email", "").strip()
+    branch.owner_email = request.form.get("owner_email", "").strip()
     log_action("admin.branch.edit", "branch", code)
     db.session.commit()
     flash("updated", "success")
     return redirect(url_for("admin.index", tab="branches"))
+
+
+@admin_bp.route("/live")
+@login_required
+@feature_required("admin.live_monitor")
+@permission_required("can_manage_users")
+def live_monitor():
+    return render_template("admin/live.html")
+
+
+@admin_bp.route("/api/live-feed")
+@login_required
+@feature_required("admin.live_monitor")
+@permission_required("can_manage_users")
+def live_feed_api():
+    lang = session.get("lang", "ar")
+    return jsonify(build_live_feed(lang))
 
 
 @admin_bp.route("/audit")

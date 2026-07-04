@@ -1,0 +1,12 @@
+{% if rows %}
+<table class="data-table">
+    <thead><tr>{% for k in rows[0].keys() %}<th>{{ k }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for r in rows %}
+    <tr>{% for v in r.values() %}<td>{{ v }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-state">{{ t('no_data') }}</p>
+{% endif %}

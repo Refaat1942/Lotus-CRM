@@ -15,8 +15,11 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        user = User.query.filter_by(username=username, is_active=True).first()
+        user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
+            if not user.is_active:
+                flash("account_blocked", "error")
+                return render_template("auth/login.html")
             login_user(user, remember=True)
             log_action("user.login", "user", user.id)
             db.session.commit()

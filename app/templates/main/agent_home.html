@@ -3,59 +3,49 @@
 {% block content %}
 <div class="page-header">
     <div>
-        <h1>{{ t('welcome') }}, {{ current_user.username }} 👋</h1>
-        <p class="subtitle">{{ t('agent_journey_hint') }}</p>
+        <h1>{{ t('agent_work_desk') }} 👋</h1>
+        <p class="subtitle">{{ t('agent_work_desk_hint') }}</p>
     </div>
 </div>
 
-<div class="journey-steps">
-    <div class="journey-step">
-        <span class="step-num">1</span>
-        <strong>{{ t('find_customer') }}</strong>
-        <a href="{{ url_for('customers.search') }}" class="btn btn-secondary btn-sm">{{ t('search_customer') }}</a>
-    </div>
-    <div class="journey-step">
-        <span class="step-num">2</span>
-        <strong>{{ t('record_complaint') }}</strong>
-        <a href="{{ url_for('complaints.new_complaint') }}" class="btn btn-primary btn-sm">{{ t('new_complaint') }}</a>
-    </div>
-    <div class="journey-step">
-        <span class="step-num">3</span>
-        <strong>{{ t('track_status') }}</strong>
-        <a href="{{ url_for('complaints.my_complaints') }}" class="btn btn-secondary btn-sm">{{ t('my_complaints') }}</a>
-    </div>
-</div>
-
-<div class="stats-row">
-    <div class="stat-card"><span class="stat-value">{{ my_today }}</span><span class="stat-label">{{ t('my_complaints') }}</span></div>
-    <div class="stat-card warn"><span class="stat-value">{{ open_count }}</span><span class="stat-label">{{ t('open') }}</span></div>
-</div>
-
-{% if recent %}
-<section class="panel">
-    <h2 class="panel-title">{{ t('recent_complaints') }}</h2>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>{{ t('complaint_serial') }}</th>
-                <th>{{ t('phone') }}</th>
-                <th>{{ t('status') }}</th>
-                <th>{{ t('date') }}</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for c in recent %}
-        <tr>
-            <td><span class="serial-badge">{{ t_serial(c) }}</span></td>
-            <td>{{ c.phone_number }}</td>
-            <td><span class="badge">{{ t_status(c.complaint_status) }}</span></td>
-            <td>{{ c.complaint_date.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td><a href="{{ url_for('complaints.complaint_detail', complaint_id=c.complaint_id) }}" class="btn btn-sm">{{ t('details') }}</a></td>
-        </tr>
+{% if action_alerts %}
+<section class="panel alert-panel">
+    <h2 class="panel-title">🔔 {{ t('action_required') }}</h2>
+    <ul class="alert-list">
+        {% for a in action_alerts[:5] %}
+        <li class="alert-item alert-{{ a.kind }}">
+            <a href="{{ a.url }}"><strong>{{ a.serial }}</strong> — {{ t(a.message_key) }}</a>
+        </li>
         {% endfor %}
-        </tbody>
-    </table>
+    </ul>
 </section>
 {% endif %}
+
+<div class="work-desk-grid">
+    <a href="{{ url_for('complaints.new_complaint') }}" class="work-desk-card primary">
+        <span class="work-desk-icon">📝</span>
+        <strong>{{ t('new_complaint') }}</strong>
+        <small>{{ t('record_complaint') }}</small>
+    </a>
+    <a href="{{ url_for('customers.search') }}" class="work-desk-card">
+        <span class="work-desk-icon">🔍</span>
+        <strong>{{ t('search_customer') }}</strong>
+        <small>{{ t('find_customer') }}</small>
+    </a>
+    <a href="{{ url_for('complaints.my_complaints') }}" class="work-desk-card">
+        <span class="work-desk-icon">📌</span>
+        <strong>{{ t('my_complaints') }}</strong>
+        <small>{{ t('track_status') }}</small>
+    </a>
+    <a href="{{ url_for('complaints.list_complaints') }}" class="work-desk-card">
+        <span class="work-desk-icon">📋</span>
+        <strong>{{ t('view_complaints') }}</strong>
+        <small>{{ t('view_all') }}</small>
+    </a>
+</div>
+
+<div class="stats-row compact-stats">
+    <div class="stat-card"><span class="stat-value">{{ my_today }}</span><span class="stat-label">{{ t('my_complaints') }} {{ t('today') }}</span></div>
+    <div class="stat-card highlight"><span class="stat-value">{{ my_open }}</span><span class="stat-label">{{ t('my_open_complaints') }}</span></div>
+</div>
 {% endblock %}

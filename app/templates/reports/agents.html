@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ t('agents_report') }} - {{ brand }}{% endblock %}
+{% block content %}
+<h1 class="page-title">{{ t('agents_report') }}</h1>
+<form class="filter-bar form-card" method="GET">
+    <input type="date" name="from" value="{{ request.args.get('from','') }}">
+    <input type="date" name="to" value="{{ request.args.get('to','') }}">
+    <button type="submit" class="btn btn-primary">{{ t('search') }}</button>
+    <a href="?from={{ request.args.get('from','') }}&to={{ request.args.get('to','') }}&export=excel" class="btn btn-secondary">{{ t('export_excel') }}</a>
+</form>
+{% include 'reports/_table.html' %}
+{% endblock %}

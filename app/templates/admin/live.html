@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ t('live_monitor') }} - {{ brand }}{% endblock %}
+{% block content %}
+<div class="page-header live-header">
+    <div>
+        <h1>📡 {{ t('live_monitor') }}</h1>
+        <p class="subtitle">{{ t('live_monitor_hint') }}</p>
+    </div>
+    <div class="live-pulse"><span class="pulse-dot"></span> {{ t('live') }} · <span id="live-clock">—</span></div>
+</div>
+
+<div class="stats-row" id="live-stats"></div>
+
+<div class="dashboard-grid">
+    <section class="panel live-panel">
+        <h2 class="panel-title">{{ t('agent_activity_today') }}</h2>
+        <div id="live-agents" class="insight-list"></div>
+    </section>
+    <section class="panel live-panel">
+        <h2 class="panel-title">{{ t('recent_complaints') }}</h2>
+        <div class="live-scroll" id="live-complaints"></div>
+    </section>
+</div>
+
+<div class="dashboard-grid">
+    <section class="panel live-panel">
+        <h2 class="panel-title">{{ t('live_activity') }}</h2>
+        <div class="live-scroll" id="live-activity"></div>
+    </section>
+    <section class="panel live-panel">
+        <h2 class="panel-title">{{ t('complaint_updates') }}</h2>
+        <div class="live-scroll" id="live-updates"></div>
+    </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const LIVE_URL = {{ url_for('admin.live_feed_api')|tojson }};
+const LABELS = {
+    today: {{ t('created_today')|tojson }},
+    open: {{ t('open')|tojson }},
+    immediate: {{ t('urgency_immediate')|tojson }},
+    unassigned: {{ t('unassigned')|tojson }},
+    activeUsers: {{ t('active_agents')|tojson }},
+    noData: {{ t('no_data')|tojson }},
+};
+
+async function refreshLive() {
+    const res = await fetch(LIVE_URL);
+    const data = await res.json();
+    document.getElementById('live-clock').textContent = data.generated_at;
+
+    const s = data.stats || {};
+    document.getElementById('live-stats').innerHTML = `
+        <div class="stat-card highlight"><span class="stat-value">${s.today||0}</span><span class="stat-label">${LABELS.today}</span></div>
+        <div class="stat-card warn"><span class="stat-value">${s.open||0}</span><span class="stat-label">${LABELS.open}</span></div>
+        <div class="stat-card"><span class="stat-value">${s.immediate||0}</span><span class="stat-label">${LABELS.immediate}</span></div>
+        <div class="stat-card"><span class="stat-value">${s.unassigned||0}</span><span class="stat-label">${LABELS.unassigned}</span></div>
+        <div class="stat-card success"><span class="stat-value">${s.active_users||0}</span><span class="stat-label">${LABELS.activeUsers}</span></div>`;
+
+    document.getElementById('live-agents').innerHTML = (data.agent_today||[]).map(a =>
+        `<div class="insight-row"><span>${a.name}</span><strong>${a.count}</strong></div>`
+    ).join('') || `<p class="empty-state">${LABELS.noData}</p>`;
+
+    document.getElementById('live-complaints').innerHTML = (data.complaints||[]).map(c =>
+        `<a class="live-row" href="${c.url}"><span class="live-time">${c.time}</span><strong>${c.serial}</strong> ${c.phone} · ${c.agent}<br><small>${c.status_label} · ${c.urgency_label} · ${c.branch}</small></a>`
+    ).join('') || `<p class="empty-state">${LABELS.noData}</p>`;
+
+    document.getElementById('live-activity').innerHTML = (data.activity||[]).map(a =>
+        `<div class="live-row"><span class="live-time">${a.time}</span><strong>${a.user}</strong> ${a.action}<br><small>${a.details}</small></div>`
+    ).join('') || `<p class="empty-state">${LABELS.noData}</p>`;
+
+    document.getElementById('live-updates').innerHTML = (data.updates||[]).map(u =>
+        `<div class="live-row"><span class="live-time">${u.time}</span><strong>#${u.complaint_id}</strong> ${u.user}<br><small>${u.text}</small></div>`
+    ).join('') || `<p class="empty-state">${LABELS.noData}</p>`;
+}
+
+refreshLive();
+setInterval(refreshLive, 10000);
+</script>
+{% endblock %}

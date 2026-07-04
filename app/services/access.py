@@ -12,7 +12,6 @@ ROLE_FEATURES = {
         "complaints.my_complaints",
         "customers.search",
         "customers.add",
-        "knowledge.index",
     ],
     ROLE_SUPERVISOR: [
         "main.agent_home",
@@ -21,9 +20,7 @@ ROLE_FEATURES = {
         "complaints.my_complaints",
         "customers.search",
         "customers.add",
-        "knowledge.index",
         "complaints.dashboard",
-        "complaints.branch_dashboard",
         "reports.index",
     ],
     ROLE_ADMIN: None,  # all enabled features
@@ -46,6 +43,13 @@ def user_can_view_reports(user):
     return user.permissions and user.permissions.can_view_reports and user_can_access(
         user, "reports.index"
     )
+
+
+ROLE_DESCRIPTIONS = {
+    ROLE_AGENT: "role_agent_desc",
+    ROLE_SUPERVISOR: "role_supervisor_desc",
+    ROLE_ADMIN: "role_admin_desc",
+}
 
 
 def user_can_admin(user):

@@ -21,7 +21,7 @@ def _get_branch_emails(branch_code):
     if not branch:
         return [], []
     to_addrs = [e for e in [branch.branch_manager_email] if e]
-    cc_addrs = [e for e in [branch.area_manager_email, branch.sales_manager_email] if e]
+    cc_addrs = [e for e in [branch.area_manager_email, branch.sales_manager_email, branch.owner_email] if e]
     return to_addrs, cc_addrs
 
 

@@ -14,19 +14,23 @@
 {% if current_user.is_authenticated %}
 <div class="app-shell">
     <aside class="sidebar">
-        <div class="sidebar-brand">
+        <a href="{{ url_for('main.agent_home') }}" class="sidebar-brand">
             {% if logo_url %}
             <img src="{{ logo_url }}" alt="{{ brand }}" class="sidebar-logo" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
             {% endif %}
             <span class="logo-fallback" {% if logo_url %}hidden{% endif %}>🪷</span>
             <div><strong>{{ brand }}</strong><small>{{ t('tagline') }}</small></div>
-        </div>
+        </a>
         <nav class="sidebar-nav">
-            {% for item in nav_items %}
-            {% set label = item.function_name if lang=='ar' else (item.function_name_en or item.function_name) %}
-            <a href="{{ url_for(item.route_name) }}" class="sidebar-link">
-                <span class="sidebar-icon">{{ item.icon }}</span>{{ label }}
-            </a>
+            {% for group in nav_groups %}
+            <div class="nav-group">
+                <div class="nav-group-title">{{ t(group.label_key) }}</div>
+                {% for item in group.items %}
+                <a href="{{ url_for(item.route_name) }}" class="sidebar-link{% if request.endpoint == item.route_name %} active{% endif %}">
+                    <span class="sidebar-icon">{{ item.icon }}</span>{{ item.label }}
+                </a>
+                {% endfor %}
+            </div>
             {% endfor %}
         </nav>
         <div class="sidebar-footer">
@@ -35,10 +39,31 @@
                 <a href="{{ url_for('auth.set_language', lang='en') }}" class="{{ 'active' if lang=='en' else '' }}">EN</a>
             </div>
             <p class="user-line">{{ t('welcome') }}, <strong>{{ current_user.username }}</strong></p>
+            <span class="role-badge">{{ t('role_' ~ (current_user.role or 'agent')) }}</span>
             <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-sm btn-block">{{ t('logout') }}</a>
         </div>
     </aside>
     <div class="main-area">
+        <header class="topbar">
+            <div class="topbar-left">
+                <a href="{{ url_for('main.agent_home') }}" class="topbar-btn" title="{{ t('main_menu') }}">🏠 {{ t('main_menu') }}</a>
+                {% if can_admin %}
+                <a href="{{ url_for('admin.index') }}" class="topbar-btn" title="{{ t('settings') }}">⚙️ {{ t('settings') }}</a>
+                {% endif %}
+            </div>
+            <div class="topbar-right">
+                <div class="notif-wrap" id="notif-wrap">
+                    <button type="button" class="notif-bell" id="notif-bell" aria-label="{{ t('notifications') }}">
+                        🔔 <span class="notif-count" id="notif-count" hidden>0</span>
+                    </button>
+                    <div class="notif-dropdown" id="notif-dropdown" hidden>
+                        <div class="notif-dropdown-head">{{ t('notifications') }}</div>
+                        <ul class="notif-list" id="notif-list"></ul>
+                        <p class="notif-empty" id="notif-empty">{{ t('no_notifications') }}</p>
+                    </div>
+                </div>
+            </div>
+        </header>
 {% endif %}
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -66,6 +91,17 @@
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% if current_user.is_authenticated %}
+<script>
+window.LOTUS_I18N = {
+    noNotifications: {{ t('no_notifications')|tojson }},
+    notifImmediate: {{ t('notif_immediate')|tojson }},
+    notifStale: {{ t('notif_stale')|tojson }},
+    notifUnassigned: {{ t('notif_unassigned')|tojson }},
+};
+window.LOTUS_NOTIF_URL = {{ url_for('main.notifications_api')|tojson }};
+</script>
+{% endif %}
 {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -31,7 +31,7 @@
 <table class="data-table" id="complaints-table">
     <thead>
         <tr>
-            <th>{{ t('complaint_serial') }}</th><th>{{ t('phone') }}</th><th>{{ t('customer') }}</th>
+            <th>{{ t('complaint_serial') }}</th><th>{{ t('urgency') }}</th><th>{{ t('phone') }}</th><th>{{ t('customer') }}</th>
             <th>{{ t('complaint_type') }}</th><th>{{ t('date') }}</th><th>{{ t('status') }}</th>
             <th>{{ t('branch') }}</th><th>{{ t('creator') }}</th><th>{{ t('assigned_agent') }}</th><th>{{ t('shift') }}</th><th>{{ t('actions') }}</th>
         </tr>
@@ -63,7 +63,7 @@ async function searchComplaints() {
     const rows = await res.json();
     document.querySelector('#complaints-table tbody').innerHTML = rows.map(r => `
         <tr class="${r.alert ? 'alert-row' : ''}">
-            <td><span class="serial-badge">${r.serial || r.id}</span></td><td>${r.phone}</td><td>${r.customer}</td><td>${r.type_label||r.type}</td>
+            <td><span class="serial-badge">${r.serial || r.id}</span></td><td>${r.urgency_label||r.urgency||'—'}</td><td>${r.phone}</td><td>${r.customer}</td><td>${r.type_label||r.type}</td>
             <td>${r.date}</td><td>${r.status_label||r.status}</td><td>${r.branch}</td>
             <td>${r.creator}</td><td>${r.assigned||'—'}</td><td>${r.shift_label||r.shift}</td>
             <td><a href="${DETAIL_URL}/${r.id}" class="btn btn-sm">{{ t('details') }}</a></td>

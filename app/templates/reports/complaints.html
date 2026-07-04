@@ -2,24 +2,24 @@
 {% block title %}{{ t('complaints_report') }} - {{ brand }}{% endblock %}
 {% block content %}
 <h1 class="page-title">{{ t('complaints_report') }}</h1>
-<form class="filter-bar" method="GET">
+<form class="filter-bar form-card" method="GET">
     <input type="date" name="from" value="{{ request.args.get('from','') }}">
     <input type="date" name="to" value="{{ request.args.get('to','') }}">
     <select name="branch">
         <option value="الكل">{{ t('all_branches') }}</option>
         {% for b in branches %}<option value="{{ b.branch_code }}" {{ 'selected' if request.args.get('branch')==b.branch_code else '' }}>{{ b.branch_name }}</option>{% endfor %}
     </select>
+    <select name="status">
+        <option value="الكل">{{ t('all_statuses') }}</option>
+        {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if request.args.get('status')==s else '' }}>{{ t_status(s) }}</option>{% endfor %}
+    </select>
+    <select name="urgency">
+        <option value="الكل">{{ t('all') }}</option>
+        {% for u in urgencies %}<option value="{{ u }}" {{ 'selected' if request.args.get('urgency')==u else '' }}>{{ t_urgency(u) }}</option>{% endfor %}
+    </select>
+    <input type="text" name="agent" value="{{ request.args.get('agent','') }}" placeholder="{{ t('assigned_agent') }}">
     <button type="submit" class="btn btn-primary">{{ t('search') }}</button>
-    <a href="?from={{ request.args.get('from','') }}&to={{ request.args.get('to','') }}&branch={{ request.args.get('branch','الكل') }}&export=excel" class="btn btn-secondary">{{ t('export_excel') }}</a>
+    <a href="?{{ request.query_string.decode() }}&export=excel" class="btn btn-secondary">{{ t('export_excel') }}</a>
 </form>
-<table class="data-table">
-    <thead><tr>{% for k in rows[0].keys() if rows %}<th>{{ k }}</th>{% endfor %}</tr></thead>
-    <tbody>
-    {% for r in rows %}
-    <tr>{% for v in r.values() %}<td>{{ v }}</td>{% endfor %}</tr>
-    {% else %}
-    <tr><td colspan="7">{{ t('no_data') }}</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% include 'reports/_table.html' %}
 {% endblock %}

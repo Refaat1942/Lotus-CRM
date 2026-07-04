@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ t('summary_report') }} - {{ brand }}{% endblock %}
+{% block content %}
+<h1 class="page-title">{{ t('summary_report') }}</h1>
+<form class="filter-bar form-card" method="GET">
+    <input type="date" name="from" value="{{ request.args.get('from','') }}">
+    <input type="date" name="to" value="{{ request.args.get('to','') }}">
+    <select name="branch">
+        <option value="الكل">{{ t('all_branches') }}</option>
+        {% for b in branches %}<option value="{{ b.branch_code }}" {{ 'selected' if request.args.get('branch')==b.branch_code else '' }}>{{ b.branch_name }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">{{ t('search') }}</button>
+    <a href="?{{ request.query_string.decode() }}&export=excel" class="btn btn-secondary">{{ t('export_excel') }}</a>
+</form>
+<div class="stat-card highlight" style="margin-bottom:1rem;display:inline-block;min-width:160px">
+    <span class="stat-value">{{ total }}</span><span class="stat-label">{{ t('total_complaints') }}</span>
+</div>
+<div class="dashboard-grid">
+    <section class="panel"><h2 class="panel-title">{{ t('by_status') }}</h2>
+        {% for r in status_rows %}<div class="insight-row"><span>{{ r.label }}</span><strong>{{ r.count }}</strong></div>{% else %}<p class="empty-state">{{ t('no_data') }}</p>{% endfor %}
+    </section>
+    <section class="panel"><h2 class="panel-title">{{ t('by_urgency') }}</h2>
+        {% for r in urgency_rows %}<div class="insight-row"><span>{{ r.label }}</span><strong>{{ r.count }}</strong></div>{% else %}<p class="empty-state">{{ t('no_data') }}</p>{% endfor %}
+    </section>
+    <section class="panel"><h2 class="panel-title">{{ t('by_branch') }}</h2>
+        {% for r in branch_rows %}<div class="insight-row"><span>{{ r.label }}</span><strong>{{ r.count }}</strong></div>{% else %}<p class="empty-state">{{ t('no_data') }}</p>{% endfor %}
+    </section>
+</div>
+{% endblock %}

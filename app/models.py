@@ -89,6 +89,7 @@ class Branch(db.Model):
     branch_manager_email = db.Column(db.String(200))
     area_manager_email = db.Column(db.String(200))
     sales_manager_email = db.Column(db.String(200))
+    owner_email = db.Column(db.String(200))
 
 
 class Employee(db.Model):
@@ -122,6 +123,7 @@ class Complaint(db.Model):
     complaint_text = db.Column(db.Text, nullable=False)
     complaint_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     complaint_status = db.Column(db.String(40), default="مفتوحة")
+    urgency = db.Column(db.String(20), default="متوسطة")
     created_by_code = db.Column(db.String(20))
     created_by_name = db.Column(db.String(120))
     assigned_to_code = db.Column(db.String(20), db.ForeignKey("employees.employee_code"))
