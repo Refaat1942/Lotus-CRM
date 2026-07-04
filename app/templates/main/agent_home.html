@@ -31,30 +31,31 @@
     <div class="stat-card warn"><span class="stat-value">{{ open_count }}</span><span class="stat-label">{{ t('open') }}</span></div>
 </div>
 
-{% endif %}
-{% endblock %}
-<h2 class="section-title">{{ t('recent_complaints') }}</h2>
-<table class="data-table">
-    <thead>
+{% if recent %}
+<section class="panel">
+    <h2 class="panel-title">{{ t('recent_complaints') }}</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ t('complaint_id') }}</th>
+                <th>{{ t('phone') }}</th>
+                <th>{{ t('status') }}</th>
+                <th>{{ t('date') }}</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for c in recent %}
         <tr>
-            <th>{{ t('complaint_id') }}</th>
-            <th>{{ t('phone') }}</th>
-            <th>{{ t('status') }}</th>
-            <th>{{ t('date') }}</th>
-            <th></th>
+            <td>#{{ c.complaint_id }}</td>
+            <td>{{ c.phone_number }}</td>
+            <td><span class="badge">{{ t_status(c.complaint_status) }}</span></td>
+            <td>{{ c.complaint_date.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td><a href="{{ url_for('complaints.complaint_detail', complaint_id=c.complaint_id) }}" class="btn btn-sm">{{ t('details') }}</a></td>
         </tr>
-    </thead>
-    <tbody>
-    {% for c in recent %}
-    <tr>
-        <td>#{{ c.complaint_id }}</td>
-        <td>{{ c.phone_number }}</td>
-        <td><span class="badge">{{ t_status(c.complaint_status) }}</span></td>
-        <td>{{ c.complaint_date.strftime('%Y-%m-%d %H:%M') }}</td>
-        <td><a href="{{ url_for('complaints.complaint_detail', complaint_id=c.complaint_id) }}" class="btn btn-sm">{{ t('details') }}</a></td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
 {% endif %}
 {% endblock %}
