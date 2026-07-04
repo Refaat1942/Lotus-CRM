@@ -4,7 +4,7 @@
 <h1 class="page-title">⚙️ {{ t('admin_panel') }}</h1>
 
 <div class="admin-tabs-nav">
-    <a href="?tab=agents" class="{{ 'active' if request.args.get('tab')=='agents' else '' }}">{{ t('link_users') }}</a>
+    <a href="?tab=agents" class="{{ 'active' if request.args.get('tab')=='agents' else '' }}">{{ t('user_management') }}</a>
     <a href="?tab=types" class="{{ 'active' if request.args.get('tab')=='types' else '' }}">{{ t('complaint_types') }}</a>
     <a href="?tab=branches" class="{{ 'active' if request.args.get('tab')=='branches' else '' }}">{{ t('branch_emails') }}</a>
     <a href="?tab=import" class="{{ 'active' if request.args.get('tab')=='import' else '' }}">{{ t('upload_excel') }}</a>
@@ -17,73 +17,134 @@
 {% set tab = request.args.get('tab', 'agents') %}
 
 {% if tab == 'agents' or tab == 'users' %}
-<section class="panel">
-    <h2 class="panel-title">👤 {{ t('link_users') }}</h2>
-    <p class="subtitle">{{ t('link_users_hint') }}</p>
-    <form method="POST" action="{{ url_for('admin.add_user') }}" class="stack-form panel">
-        <h3>{{ t('add_user') }}</h3>
-        <div class="form-grid">
-            <input name="username" placeholder="{{ t('username') }}" required>
-            <input name="password" type="password" placeholder="{{ t('password') }}" required>
-            <select name="role">
-                <option value="agent">{{ t('role_agent') }}</option>
-                <option value="supervisor">{{ t('role_supervisor') }}</option>
-                <option value="admin">{{ t('role_admin') }}</option>
-            </select>
-            <select name="employee_code" required>
-                <option value="">— {{ t('employee') }} —</option>
-                {% for e in employees %}<option value="{{ e.employee_code }}">{{ e.employee_code }} — {{ e.employee_name }}</option>{% endfor %}
-            </select>
-        </div>
-        <button type="submit" class="btn btn-primary">{{ t('add_user') }}</button>
-    </form>
-    <table class="data-table">
-        <thead><tr><th>{{ t('username') }}</th><th>{{ t('role') }} / {{ t('employee') }}</th><th>{{ t('account_status') }}</th><th>{{ t('actions') }}</th></tr></thead>
-        <tbody>
-        {% for u in users %}
-        <tr>
-            <td>{{ u.username }}</td>
-            <td>
-                <form method="POST" action="{{ url_for('admin.update_user_role', user_id=u.id) }}" class="inline-form">
-                    <select name="role">
-                        <option value="agent" {{ 'selected' if u.role=='agent' else '' }}>{{ t('role_agent') }}</option>
-                        <option value="supervisor" {{ 'selected' if u.role=='supervisor' else '' }}>{{ t('role_supervisor') }}</option>
-                        <option value="admin" {{ 'selected' if u.role=='admin' else '' }}>{{ t('role_admin') }}</option>
-                    </select>
-                    <select name="employee_code">
-                        <option value="">—</option>
-                        {% for e in employees %}<option value="{{ e.employee_code }}" {{ 'selected' if u.employee_code==e.employee_code else '' }}>{{ e.employee_name }}</option>{% endfor %}
-                    </select>
-                    <button type="submit" class="btn btn-sm btn-primary">{{ t('save') }}</button>
-                </form>
-            </td>
-            <td>
-                {% if u.is_active %}<span class="badge badge-success">{{ t('active') }}</span>
-                {% else %}<span class="badge badge-danger">{{ t('blocked') }}</span>{% endif %}
-            </td>
-            <td>
-                {% if u.username != 'admin' %}
-                <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=u.id) }}" class="inline-form">
-                    <button type="submit" class="btn btn-sm btn-secondary">{{ t('unblock_user') if not u.is_active else t('block_user') }}</button>
-                </form>
-                <form method="POST" action="{{ url_for('admin.delete_user', user_id=u.id) }}" onsubmit="return confirm('{{ t('confirm_delete') }}')">
-                    <button type="submit" class="btn btn-danger btn-sm">{{ t('delete') }}</button>
-                </form>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    <div class="perm-legend panel-sub">
-        <strong>{{ t('permissions_legend') }}:</strong>
-        <ul class="perm-list">
-            <li><strong>{{ t('role_agent') }}</strong> — {{ t('role_agent_desc') }}</li>
-            <li><strong>{{ t('role_supervisor') }}</strong> — {{ t('role_supervisor_desc') }}</li>
-            <li><strong>{{ t('role_admin') }}</strong> — {{ t('role_admin_desc') }}</li>
-        </ul>
+<div class="users-admin">
+    <div class="users-admin-header">
+        <h2 class="panel-title">👤 {{ t('user_management') }}</h2>
+        <p class="subtitle">{{ t('user_management_hint') }}</p>
     </div>
-</section>
+
+    <section class="panel users-add-panel">
+        <h3 class="users-section-title">{{ t('add_user') }}</h3>
+        <form method="POST" action="{{ url_for('admin.add_user') }}" class="users-add-form">
+            <div class="form-group">
+                <label for="new-username">{{ t('username') }}</label>
+                <input id="new-username" name="username" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="new-password">{{ t('password') }}</label>
+                <input id="new-password" name="password" type="password" required autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label for="new-role">{{ t('role') }}</label>
+                <select id="new-role" name="role">
+                    <option value="agent">{{ t('role_agent') }}</option>
+                    <option value="supervisor">{{ t('role_supervisor') }}</option>
+                    <option value="admin">{{ t('role_admin') }}</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="new-employee">{{ t('linked_employee') }} <span class="field-optional">({{ t('optional') }})</span></label>
+                <select id="new-employee" name="employee_code">
+                    <option value="">—</option>
+                    {% for e in employees %}
+                    <option value="{{ e.employee_code }}">{{ e.employee_name }} ({{ e.employee_code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group users-add-actions">
+                <button type="submit" class="btn btn-primary">{{ t('add_user') }}</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel users-list-panel">
+        <h3 class="users-section-title">{{ t('existing_users') }}</h3>
+        <div class="table-wrap">
+            <table class="data-table users-table">
+                <thead>
+                    <tr>
+                        <th>{{ t('username') }}</th>
+                        <th>{{ t('role') }}</th>
+                        <th>{{ t('linked_employee') }}</th>
+                        <th>{{ t('account_status') }}</th>
+                        <th class="col-actions">{{ t('actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for u in users %}
+                {% if u.username != 'admin' %}
+                <form id="user-form-{{ u.id }}" method="POST" action="{{ url_for('admin.update_user_role', user_id=u.id) }}" hidden></form>
+                {% endif %}
+                <tr class="{{ 'user-row-blocked' if not u.is_active else '' }}">
+                    <td class="user-cell-name">
+                        <strong>{{ u.username }}</strong>
+                        {% if u.username == 'admin' %}<span class="user-protected-tag">{{ t('role_admin') }}</span>{% endif %}
+                    </td>
+                    {% if u.username == 'admin' %}
+                    <td><span class="role-pill role-admin">{{ t('role_admin') }}</span></td>
+                    <td>{{ u.employee.employee_name if u.employee else '—' }}</td>
+                    <td><span class="badge badge-success">{{ t('active') }}</span></td>
+                    <td class="user-actions-cell"><span class="muted-text">—</span></td>
+                    {% else %}
+                    <td>
+                        <select name="role" form="user-form-{{ u.id }}" class="users-select">
+                            <option value="agent" {{ 'selected' if u.role=='agent' else '' }}>{{ t('role_agent') }}</option>
+                            <option value="supervisor" {{ 'selected' if u.role=='supervisor' else '' }}>{{ t('role_supervisor') }}</option>
+                            <option value="admin" {{ 'selected' if u.role=='admin' else '' }}>{{ t('role_admin') }}</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select name="employee_code" form="user-form-{{ u.id }}" class="users-select">
+                            <option value="">—</option>
+                            {% for e in employees %}
+                            <option value="{{ e.employee_code }}" {{ 'selected' if u.employee_code==e.employee_code else '' }}>{{ e.employee_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                        <span class="badge badge-success">{{ t('active') }}</span>
+                        {% else %}
+                        <span class="badge badge-danger">{{ t('blocked') }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="user-actions-cell">
+                        <div class="user-actions">
+                            <button type="submit" form="user-form-{{ u.id }}" class="btn btn-sm btn-primary">{{ t('save') }}</button>
+                            <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=u.id) }}">
+                                <button type="submit" class="btn btn-sm btn-secondary">{{ t('unblock_user') if not u.is_active else t('block_user') }}</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin.delete_user', user_id=u.id) }}" onsubmit="return confirm('{{ t('confirm_delete') }}')">
+                                <button type="submit" class="btn btn-sm btn-danger">{{ t('delete') }}</button>
+                            </form>
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel users-roles-panel">
+        <h3 class="users-section-title">{{ t('role_permissions') }}</h3>
+        <div class="role-cards">
+            <article class="role-card">
+                <span class="role-pill role-agent">{{ t('role_agent') }}</span>
+                <p>{{ t('role_agent_desc') }}</p>
+            </article>
+            <article class="role-card">
+                <span class="role-pill role-supervisor">{{ t('role_supervisor') }}</span>
+                <p>{{ t('role_supervisor_desc') }}</p>
+            </article>
+            <article class="role-card">
+                <span class="role-pill role-admin">{{ t('role_admin') }}</span>
+                <p>{{ t('role_admin_desc') }}</p>
+            </article>
+        </div>
+    </section>
+</div>
 {% elif tab == 'types' %}
 <section class="panel">
     <h2 class="panel-title">{{ t('complaint_types') }}</h2>

@@ -367,6 +367,73 @@ body.lang-en .alert-panel { border-right: none; border-left: 4px solid var(--war
 }
 .work-desk-card:hover { transform: translateY(-2px); border-color: var(--primary); }
 .work-desk-card.primary { background: color-mix(in srgb, var(--primary) 10%, white); border-color: var(--primary); }
+
+/* User management (admin) */
+.users-admin { display: flex; flex-direction: column; gap: 1.25rem; }
+.users-admin-header { margin-bottom: 0.25rem; }
+.users-admin-header .panel-title { margin-bottom: 0.35rem; }
+.users-section-title {
+    font-size: 0.95rem; font-weight: 800; color: var(--primary-dark);
+    margin: 0 0 1rem; text-transform: uppercase; letter-spacing: 0.03em;
+}
+.users-add-form {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(160px, 1fr)) auto;
+    gap: 1rem;
+    align-items: end;
+}
+.users-add-form .form-group label {
+    display: block; font-size: 0.82rem; font-weight: 700;
+    color: var(--muted); margin-bottom: 0.35rem;
+}
+.users-add-form input,
+.users-add-form select,
+.users-select {
+    width: 100%; padding: 0.55rem 0.65rem;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-family: inherit; font-size: 0.92rem; background: #fff;
+}
+.field-optional { font-weight: 400; font-size: 0.78rem; color: var(--muted); }
+.users-add-actions { display: flex; align-items: flex-end; }
+.table-wrap { overflow-x: auto; }
+.users-table .col-actions { width: 220px; text-align: end; }
+.users-table td { vertical-align: middle; }
+.user-cell-name strong { display: block; }
+.user-protected-tag {
+    display: inline-block; margin-top: 0.25rem;
+    font-size: 0.72rem; font-weight: 700; color: var(--muted);
+}
+.user-row-blocked { opacity: 0.72; }
+.user-actions {
+    display: flex; flex-wrap: wrap; gap: 0.35rem;
+    justify-content: flex-end; align-items: center;
+}
+.user-actions form { margin: 0; }
+.muted-text { color: var(--muted); font-size: 0.9rem; }
+.role-cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;
+}
+.role-card {
+    padding: 1rem 1.1rem; border-radius: 10px;
+    background: color-mix(in srgb, var(--primary) 6%, white);
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, white);
+}
+.role-card p { margin: 0.65rem 0 0; font-size: 0.88rem; color: var(--muted); line-height: 1.45; }
+.role-pill {
+    display: inline-block; padding: 0.25rem 0.65rem; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 800;
+}
+.role-agent { background: #e3f2fd; color: #1565c0; }
+.role-supervisor { background: #f3e5f5; color: #6a1b9a; }
+.role-admin { background: #e8f5e9; color: #2e7d32; }
+
+@media (max-width: 960px) {
+    .users-add-form { grid-template-columns: 1fr 1fr; }
+    .users-add-actions { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+    .users-add-form { grid-template-columns: 1fr; }
+}
 .work-desk-icon { font-size: 2rem; margin-bottom: 0.5rem; }
 .work-desk-card small { color: var(--muted); margin-top: 0.35rem; }
 .compact-stats { margin-top: 0.5rem; }
