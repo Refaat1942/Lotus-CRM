@@ -31,18 +31,8 @@
     <div class="stat-card warn"><span class="stat-value">{{ open_count }}</span><span class="stat-label">{{ t('open') }}</span></div>
 </div>
 
-<h2 class="section-title">{{ t('quick_actions') }}</h2>
-<div class="feature-grid">
-    {% for func in functions %}
-    {% set name = func.function_name if lang == 'ar' else (func.function_name_en or func.function_name) %}
-    <a href="{{ url_for(func.route_name) }}" class="feature-card" style="--card-color: {{ func.color_hex }}">
-        <span class="feature-icon">{{ func.icon }}</span>
-        <span class="feature-name">{{ name }}</span>
-    </a>
-    {% endfor %}
-</div>
-
-{% if recent %}
+{% endif %}
+{% endblock %}
 <h2 class="section-title">{{ t('recent_complaints') }}</h2>
 <table class="data-table">
     <thead>

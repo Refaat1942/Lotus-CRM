@@ -44,12 +44,9 @@ def agent_home():
     quick = [f for f in functions if f.route_name != "main.agent_home"]
     return render_template(
         "main/agent_home.html",
-        functions=quick,
         my_today=my_today,
         open_count=open_count,
         recent=recent,
-        can_reports=user_can_view_reports(current_user),
-        can_admin=user_can_admin(current_user),
     )
 
 

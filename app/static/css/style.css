@@ -193,7 +193,61 @@ body.lang-en .journey-step { border-right: none; border-left: 4px solid var(--pr
 .tab.active { background: var(--primary); color: white; }
 
 @media (max-width: 768px) {
-    .nav-brand { width: 100%; }
     .feature-grid { grid-template-columns: 1fr 1fr; }
     .login-logo { max-height: 90px; }
+    .sidebar { width: 100%; height: auto; position: relative; }
+    .app-shell { flex-direction: column; }
+    .main-area { margin-left: 0 !important; margin-right: 0 !important; }
+}
+
+/* Sidebar layout */
+.app-shell { display: flex; min-height: 100vh; }
+.sidebar {
+    width: 260px; background: linear-gradient(180deg, var(--primary-dark), var(--primary));
+    color: white; display: flex; flex-direction: column; padding: 1.25rem 1rem;
+    position: fixed; top: 0; bottom: 0; overflow-y: auto; z-index: 100;
+}
+body.lang-ar .sidebar { right: 0; }
+body.lang-en .sidebar { left: 0; }
+body.lang-ar .main-area { margin-right: 260px; }
+body.lang-en .main-area { margin-left: 260px; }
+.main-area { flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+.page-content { flex: 1; padding: 1.5rem 2rem; max-width: 1200px; width: 100%; }
+.sidebar-brand { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.2); }
+.sidebar-logo { height: 52px; max-width: 120px; object-fit: contain; background: white; padding: 4px 8px; border-radius: 8px; }
+.sidebar-brand small { display: block; opacity: 0.85; font-size: 0.72rem; line-height: 1.3; }
+.sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 0.35rem; }
+.sidebar-link {
+    display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0.85rem;
+    color: rgba(255,255,255,0.95); text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 0.92rem;
+}
+.sidebar-link:hover { background: rgba(255,255,255,0.15); color: white; }
+.sidebar-icon { font-size: 1.2rem; width: 1.5rem; text-align: center; }
+.sidebar-footer { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2); }
+.lang-toggle { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+.lang-toggle a { color: white; opacity: 0.8; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 6px; text-decoration: none; }
+.lang-toggle a.active { background: rgba(255,255,255,0.25); opacity: 1; }
+.user-line { font-size: 0.85rem; margin-bottom: 0.75rem; }
+
+.panel { background: white; border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; }
+.panel-title { font-size: 1.1rem; color: var(--primary-dark); margin-bottom: 1rem; }
+.panel-sub { font-size: 0.95rem; margin: 1rem 0 0.5rem; }
+.layout-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+.stack-form { display: flex; flex-direction: column; gap: 0.75rem; max-width: 480px; }
+.stack-form select, .stack-form textarea { padding: 0.65rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; }
+.info-list { display: grid; grid-template-columns: 140px 1fr; gap: 0.5rem 1rem; margin-bottom: 1rem; }
+.info-list dt { font-weight: 700; color: var(--muted); }
+.badge-lg { font-size: 1rem; padding: 0.4rem 1rem; }
+
+.timeline { list-style: none; padding: 0; }
+.timeline-item { border-left: 3px solid var(--primary); padding: 0.75rem 0 0.75rem 1rem; margin-left: 0.5rem; margin-bottom: 0.5rem; background: #f8fafc; border-radius: 0 8px 8px 0; }
+body.lang-ar .timeline-item { border-left: none; border-right: 3px solid var(--primary); padding: 0.75rem 1rem 0.75rem 0; margin-left: 0; margin-right: 0.5rem; }
+.timeline-created { border-color: var(--success); }
+.timeline-status { border-color: var(--warning); }
+.timeline-meta { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.35rem; }
+.timeline-body { font-size: 0.95rem; }
+.empty-state { color: var(--muted); padding: 1rem; text-align: center; }
+
+@media (max-width: 900px) {
+    .layout-two-col { grid-template-columns: 1fr; }
 }

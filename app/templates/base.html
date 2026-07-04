@@ -6,53 +6,63 @@
     <title>{% block title %}{{ brand }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>:root { --primary: {{ primary_color }}; --primary-dark: color-mix(in srgb, {{ primary_color }} 75%, black); }</style>
+    <style>:root { --primary: {{ primary_color }}; --primary-dark: color-mix(in srgb, {{ primary_color }} 70%, #000); }</style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="lang-{{ lang }}">
+<body class="lang-{{ lang }}{% if current_user.is_authenticated %} has-sidebar{% endif %}">
+
 {% if current_user.is_authenticated %}
-<nav class="navbar">
-    <div class="nav-brand">
-        {% if logo_url %}
-        <img src="{{ logo_url }}" alt="{{ brand }}" class="nav-logo">
-        {% else %}
-        <span class="logo-fallback">🪷</span>
-        {% endif %}
-        <div class="brand-text">
-            <strong>{{ brand }}</strong>
-            <small>{{ t('tagline') }}</small>
+<div class="app-shell">
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            {% if logo_url %}<img src="{{ logo_url }}" alt="{{ brand }}" class="sidebar-logo">{% else %}<span class="logo-fallback">🪷</span>{% endif %}
+            <div><strong>{{ brand }}</strong><small>{{ t('tagline') }}</small></div>
         </div>
-    </div>
-    <div class="nav-links">
-        <a href="{{ url_for('main.agent_home') }}">{{ t('agent_home') }}</a>
-        {% if show_reports %}
-        <a href="{{ url_for('reports.index') }}">{{ t('reports') }}</a>
-        {% endif %}
-        {% if show_admin %}
-        <a href="{{ url_for('admin.index') }}">{{ t('admin_panel') }}</a>
-        {% endif %}
-        <a href="{{ url_for('auth.set_language', lang='ar') }}" class="lang-btn {{ 'active' if lang=='ar' else '' }}">AR</a>
-        <a href="{{ url_for('auth.set_language', lang='en') }}" class="lang-btn {{ 'active' if lang=='en' else '' }}">EN</a>
-        <span class="user-badge">{{ t('welcome') }}, {{ current_user.username }}</span>
-        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-sm">{{ t('logout') }}</a>
-    </div>
-</nav>
+        <nav class="sidebar-nav">
+            {% for item in nav_items %}
+            {% set label = item.function_name if lang=='ar' else (item.function_name_en or item.function_name) %}
+            <a href="{{ url_for(item.route_name) }}" class="sidebar-link">
+                <span class="sidebar-icon">{{ item.icon }}</span>{{ label }}
+            </a>
+            {% endfor %}
+            {% if show_reports %}
+            <a href="{{ url_for('reports.index') }}" class="sidebar-link"><span class="sidebar-icon">📈</span>{{ t('reports') }}</a>
+            {% endif %}
+            {% if show_admin %}
+            <a href="{{ url_for('admin.index') }}" class="sidebar-link"><span class="sidebar-icon">⚙️</span>{{ t('admin_panel') }}</a>
+            <a href="{{ url_for('admin.audit_logs') }}" class="sidebar-link"><span class="sidebar-icon">📜</span>{{ t('audit_logs') }}</a>
+            {% endif %}
+        </nav>
+        <div class="sidebar-footer">
+            <div class="lang-toggle">
+                <a href="{{ url_for('auth.set_language', lang='ar') }}" class="{{ 'active' if lang=='ar' else '' }}">AR</a>
+                <a href="{{ url_for('auth.set_language', lang='en') }}" class="{{ 'active' if lang=='en' else '' }}">EN</a>
+            </div>
+            <p class="user-line">{{ t('welcome') }}, <strong>{{ current_user.username }}</strong></p>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-sm btn-block">{{ t('logout') }}</a>
+        </div>
+    </aside>
+    <div class="main-area">
 {% endif %}
 
-<main class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="flash-messages">
-        {% for category, message in messages %}
-        <div class="flash flash-{{ category }}">{{ t(message) }}</div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% endwith %}
-    {% block content %}{% endblock %}
-</main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages page-content">{% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ t(message) }}</div>
+        {% endfor %}</div>
+        {% endif %}
+        {% endwith %}
 
-<footer class="footer"><p>{{ brand }} · {{ t('backup_info') }}</p></footer>
+        <div class="{% if current_user.is_authenticated %}page-content{% endif %}">
+            {% block content %}{% endblock %}
+        </div>
+
+{% if current_user.is_authenticated %}
+        <footer class="footer"><p>{{ brand }} · {{ t('backup_info') }}</p></footer>
+    </div>
+</div>
+{% endif %}
+
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% block extra_js %}{% endblock %}
 </body>

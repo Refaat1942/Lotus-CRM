@@ -11,6 +11,7 @@ from app.extensions import db
 from app.models import (
     AppSetting,
     Branch,
+    ComplaintType,
     Employee,
     SystemFunction,
     User,
@@ -122,6 +123,16 @@ SAMPLE_EMPLOYEES = [
     ("E003", "Omar Ali", "B003"),
 ]
 
+DEFAULT_COMPLAINT_TYPES = [
+    ("تأخير", "Delay", False),
+    ("منتج خاطئ", "Wrong Product", False),
+    ("معاملة سيئة", "Bad Service", False),
+    ("أخرى", "Other", False),
+    ("نقص ادويه", "Medicine Shortage", False),
+    ("بديل غير مناسب", "Bad Substitute", False),
+    ("مشكلة اون لاين", "Online Issue", True),
+]
+
 
 def _migrate_schema():
     inspector = inspect(db.engine)
@@ -137,6 +148,10 @@ def _migrate_schema():
             db.session.execute(text("ALTER TABLE employees ADD COLUMN branch_code VARCHAR(20)"))
         if "is_active" not in cols:
             db.session.execute(text("ALTER TABLE employees ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
+    if "complaint_details" in inspector.get_table_names():
+        cols = {c["name"] for c in inspector.get_columns("complaint_details")}
+        if "action_type" not in cols:
+            db.session.execute(text("ALTER TABLE complaint_details ADD COLUMN action_type VARCHAR(40) DEFAULT 'note'"))
     db.session.commit()
 
 
@@ -193,6 +208,12 @@ def init_db():
             for code, name, branch in SAMPLE_EMPLOYEES:
                 db.session.add(
                     Employee(employee_code=code, employee_name=name, branch_code=branch, is_active=True)
+                )
+
+        if ComplaintType.query.count() == 0:
+            for i, (ar, en, online) in enumerate(DEFAULT_COMPLAINT_TYPES):
+                db.session.add(
+                    ComplaintType(name_ar=ar, name_en=en, requires_online=online, sort_order=i, is_active=True)
                 )
 
         defaults = {

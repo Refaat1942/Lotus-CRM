@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ t('audit_logs') }} - {{ brand }}{% endblock %}
+{% block content %}
+<h1 class="page-title">📜 {{ t('audit_logs') }}</h1>
+<form method="GET" class="filter-bar panel">
+    <label>{{ t('username') }}</label>
+    <select name="user" onchange="this.form.submit()">
+        <option value="">{{ t('all') }}</option>
+        {% for u in usernames %}
+        <option value="{{ u }}" {{ 'selected' if user_filter==u else '' }}>{{ u }}</option>
+        {% endfor %}
+    </select>
+</form>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>{{ t('date') }}</th>
+            <th>{{ t('username') }}</th>
+            <th>{{ t('actions') }}</th>
+            <th>{{ t('details') }}</th>
+            <th>IP</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for log in logs %}
+    <tr>
+        <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td>{{ log.username }}</td>
+        <td><code>{{ log.action }}</code></td>
+        <td>{{ log.details or '—' }}{% if log.entity_type %} <small>({{ log.entity_type }} #{{ log.entity_id or '' }})</small>{% endif %}</td>
+        <td>{{ log.ip_address or '—' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">{{ t('no_data') }}</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

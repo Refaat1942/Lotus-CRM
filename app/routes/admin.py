@@ -18,8 +18,9 @@ from werkzeug.utils import secure_filename
 
 from app.decorators import feature_required, permission_required
 from app.extensions import db
-from app.models import AppSetting, Branch, Employee, SystemFunction, User, UserFunctionAccess, UserPermission
+from app.models import AppSetting, AuditLog, Branch, ComplaintType, Employee, SystemFunction, User, UserFunctionAccess, UserPermission
 from app.services.access import ROLE_ADMIN, ROLE_AGENT, ROLE_SUPERVISOR, apply_role_features
+from app.services.audit import log_action
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -57,12 +58,16 @@ def index():
             for row in UserFunctionAccess.query.filter_by(user_id=u.id).all()
         }
     employees = Employee.query.filter_by(is_active=True).order_by(Employee.employee_name).all()
+    branches = Branch.query.order_by(Branch.branch_name).all()
+    complaint_types = ComplaintType.query.order_by(ComplaintType.sort_order).all()
     return render_template(
         "admin/index.html",
         users=users,
         functions=functions,
         access_map=access_map,
         employees=employees,
+        branches=branches,
+        complaint_types=complaint_types,
         settings=_settings_dict(),
         roles=[ROLE_AGENT, ROLE_SUPERVISOR, ROLE_ADMIN],
     )
@@ -305,3 +310,74 @@ def import_employees():
     db.session.commit()
     flash("import_success", "success")
     return redirect(url_for("admin.index", tab="import"))
+
+
+@admin_bp.route("/types/add", methods=["POST"])
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def add_complaint_type():
+    name_ar = request.form.get("name_ar", "").strip()
+    name_en = request.form.get("name_en", "").strip()
+    if not name_ar:
+        flash("required_fields", "error")
+        return redirect(url_for("admin.index", tab="types"))
+    db.session.add(
+        ComplaintType(
+            name_ar=name_ar,
+            name_en=name_en,
+            requires_online="requires_online" in request.form,
+            sort_order=ComplaintType.query.count() + 1,
+        )
+    )
+    log_action("admin.type.add", "complaint_type", details=name_ar)
+    db.session.commit()
+    flash("updated", "success")
+    return redirect(url_for("admin.index", tab="types"))
+
+
+@admin_bp.route("/types/<int:type_id>/edit", methods=["POST"])
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def edit_complaint_type(type_id):
+    ct = ComplaintType.query.get_or_404(type_id)
+    ct.name_ar = request.form.get("name_ar", ct.name_ar).strip()
+    ct.name_en = request.form.get("name_en", ct.name_en or "").strip()
+    ct.requires_online = "requires_online" in request.form
+    ct.is_active = "is_active" in request.form
+    log_action("admin.type.edit", "complaint_type", type_id, ct.name_ar)
+    db.session.commit()
+    flash("updated", "success")
+    return redirect(url_for("admin.index", tab="types"))
+
+
+@admin_bp.route("/branches/save", methods=["POST"])
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def save_branch_emails():
+    code = request.form.get("branch_code")
+    branch = Branch.query.get_or_404(code)
+    branch.branch_name = request.form.get("branch_name", branch.branch_name).strip()
+    branch.branch_manager_email = request.form.get("branch_manager_email", "").strip()
+    branch.area_manager_email = request.form.get("area_manager_email", "").strip()
+    branch.sales_manager_email = request.form.get("sales_manager_email", "").strip()
+    log_action("admin.branch.edit", "branch", code)
+    db.session.commit()
+    flash("updated", "success")
+    return redirect(url_for("admin.index", tab="branches"))
+
+
+@admin_bp.route("/audit")
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def audit_logs():
+    user_filter = request.args.get("user", "")
+    q = AuditLog.query.order_by(AuditLog.created_at.desc())
+    if user_filter:
+        q = q.filter(AuditLog.username == user_filter)
+    logs = q.limit(300).all()
+    usernames = [u.username for u in User.query.order_by(User.username).all()]
+    return render_template("admin/audit.html", logs=logs, usernames=usernames, user_filter=user_filter)

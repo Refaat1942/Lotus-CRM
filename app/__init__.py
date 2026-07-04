@@ -71,12 +71,14 @@ def create_app(config_class=Config):
         from flask import session
         from flask_login import current_user
         from app.services.access import user_can_admin, user_can_view_reports
+        from app.services.nav import get_nav_items
 
         if not current_user.is_authenticated:
-            return dict(show_reports=False, show_admin=False)
+            return dict(show_reports=False, show_admin=False, nav_items=[])
         return dict(
             show_reports=user_can_view_reports(current_user),
             show_admin=user_can_admin(current_user),
+            nav_items=get_nav_items(current_user),
         )
 
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)

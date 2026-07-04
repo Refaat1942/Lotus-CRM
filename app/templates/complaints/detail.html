@@ -1,48 +1,67 @@
 {% extends "base.html" %}
 {% block title %}#{{ complaint.complaint_id }} - {{ brand }}{% endblock %}
 {% block content %}
-<h1 class="page-title">🔍 {{ t('details') }} #{{ complaint.complaint_id }}</h1>
-<div class="detail-grid">
-    <div class="detail-card">
-        <p><strong>{{ t('phone') }}:</strong> {{ complaint.phone_number }}</p>
-        <p><strong>{{ t('branch') }}:</strong> {{ complaint.branch.branch_name if complaint.branch else complaint.branch_code }}</p>
-        <p><strong>{{ t('complaint_type') }}:</strong> {{ t_type(complaint.complaint_type) }}</p>
-        <p><strong>{{ t('status') }}:</strong> <span class="badge">{{ t_status(complaint.complaint_status) }}</span></p>
-        <p><strong>{{ t('shift') }}:</strong> {{ t_shift(complaint.shift) }}</p>
-        <p><strong>{{ t('creator') }}:</strong> {{ complaint.created_by_name }}</p>
-        <p><strong>{{ t('complaint_text') }}:</strong></p>
-        <div class="text-box">{{ complaint.complaint_text }}</div>
+<div class="page-header">
+    <div>
+        <h1>#{{ complaint.complaint_id }}</h1>
+        <p class="subtitle">{{ t('complaint_history') }} & {{ t('update_status') }}</p>
     </div>
-    <div class="detail-card">
-        <form method="POST">
+    <span class="badge badge-lg">{{ t_status(complaint.complaint_status) }}</span>
+</div>
+
+<div class="layout-two-col">
+    <section class="panel">
+        <h2 class="panel-title">{{ t('details') }}</h2>
+        <dl class="info-list">
+            <dt>{{ t('phone') }}</dt><dd>{{ complaint.phone_number }}</dd>
+            <dt>{{ t('customer') }}</dt><dd>{% if customer %}{{ customer.first_name }} {{ customer.last_name }}{% else %}—{% endif %}</dd>
+            <dt>{{ t('branch') }}</dt><dd>{{ complaint.branch.branch_name if complaint.branch else complaint.branch_code }}</dd>
+            <dt>{{ t('complaint_type') }}</dt><dd>{{ type_display }}</dd>
+            <dt>{{ t('creator') }}</dt><dd>{{ complaint.created_by_name }}</dd>
+            <dt>{{ t('shift') }}</dt><dd>{{ t_shift(complaint.shift) }}</dd>
+            <dt>{{ t('date') }}</dt><dd>{{ complaint.complaint_date.strftime('%Y-%m-%d %H:%M') }}</dd>
+        </dl>
+        <h3 class="panel-sub">{{ t('complaint_text') }}</h3>
+        <div class="text-box">{{ complaint.complaint_text }}</div>
+    </section>
+
+    <section class="panel">
+        <h2 class="panel-title">{{ t('update_status') }}</h2>
+        <form method="POST" class="stack-form">
             <input type="hidden" name="action" value="status">
-            <label>{{ t('update_status') }}</label>
             <select name="status">
                 {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==complaint.complaint_status else '' }}>{{ t_status(s) }}</option>{% endfor %}
             </select>
             <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
         </form>
-        <hr>
-        <form method="POST">
+        <h2 class="panel-title">{{ t('add_note') }}</h2>
+        <form method="POST" class="stack-form">
             <input type="hidden" name="action" value="note">
-            <label>{{ t('add_note') }}</label>
-            <input type="hidden" name="modifier" value="{{ default_modifier }}">
-            <p class="hint">{{ t('modifier') }}: {{ default_modifier }}</p>
-            <textarea name="detail_text" rows="3" required placeholder="{{ t('note_text') }}"></textarea>
+            <textarea name="detail_text" rows="4" required placeholder="{{ t('note_text') }}"></textarea>
             <button type="submit" class="btn btn-secondary">{{ t('save') }}</button>
         </form>
-    </div>
+    </section>
 </div>
-{% if complaint.details %}
-<h2 class="section-title">{{ t('details') }}</h2>
-<table class="data-table">
-    <thead><tr><th>{{ t('date') }}</th><th>{{ t('modifier') }}</th><th>{{ t('text') }}</th></tr></thead>
-    <tbody>
-    {% for d in complaint.details %}
-    <tr><td>{{ d.detail_date.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ d.modifier }}</td><td>{{ d.detail_text }}</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
-{% endif %}
+
+<section class="panel timeline-panel">
+    <h2 class="panel-title">📜 {{ t('complaint_history') }}</h2>
+    {% if timeline %}
+    <ul class="timeline">
+        {% for item in timeline %}
+        <li class="timeline-item timeline-{{ item.action_type or 'note' }}">
+            <div class="timeline-meta">
+                <span class="timeline-date">{{ item.detail_date.strftime('%Y-%m-%d %H:%M') }}</span>
+                <span class="timeline-user">{{ item.modifier }}</span>
+                <span class="timeline-type">{{ item.action_type or 'note' }}</span>
+            </div>
+            <div class="timeline-body">{{ item.detail_text }}</div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty-state">{{ t('no_data') }}</p>
+    {% endif %}
+</section>
+
 <a href="{{ url_for('complaints.list_complaints') }}" class="btn btn-outline-dark">{{ t('back') }}</a>
 {% endblock %}

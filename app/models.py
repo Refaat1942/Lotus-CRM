@@ -141,8 +141,45 @@ class ComplaintDetail(db.Model):
     detail_date = db.Column(db.DateTime, default=datetime.utcnow)
     modifier = db.Column(db.String(120))
     detail_text = db.Column(db.Text)
+    action_type = db.Column(db.String(40), default="note")  # note, status, created
 
-    complaint = db.relationship("Complaint", back_populates="details")
+    complaint = db.relationship(
+        "Complaint",
+        back_populates="details",
+        order_by="ComplaintDetail.detail_date.desc()",
+    )
+
+
+class ComplaintType(db.Model):
+    __tablename__ = "complaint_types"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name_ar = db.Column(db.String(80), nullable=False)
+    name_en = db.Column(db.String(80))
+    requires_online = db.Column(db.Boolean, default=False)
+    sort_order = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+
+    def display_name(self, lang="ar"):
+        if lang == "en" and self.name_en:
+            return self.name_en
+        return self.name_ar
+
+
+class AuditLog(db.Model):
+    __tablename__ = "audit_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("admin_users.id"), nullable=True)
+    username = db.Column(db.String(80))
+    action = db.Column(db.String(80), nullable=False)
+    entity_type = db.Column(db.String(40))
+    entity_id = db.Column(db.String(40))
+    details = db.Column(db.Text)
+    ip_address = db.Column(db.String(45))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    user = db.relationship("User")
 
 
 class ProductKnowledge(db.Model):
