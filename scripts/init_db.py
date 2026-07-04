@@ -3,7 +3,7 @@ import os
 import sys
 
 from sqlalchemy import inspect, text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -192,45 +192,38 @@ def _ensure_database_schema():
 
 
 def _migrate_schema():
+    """Safe additive migrations — every ALTER uses IF NOT EXISTS (PostgreSQL)."""
     inspector = inspect(db.engine)
-    if "admin_users" in inspector.get_table_names():
-        cols = {c["name"] for c in inspector.get_columns("admin_users")}
-        if "role" not in cols:
-            db.session.execute(text("ALTER TABLE admin_users ADD COLUMN role VARCHAR(20) DEFAULT 'admin'"))
-        if "employee_code" not in cols:
-            db.session.execute(text("ALTER TABLE admin_users ADD COLUMN employee_code VARCHAR(20)"))
-    if "employees" in inspector.get_table_names():
-        cols = {c["name"] for c in inspector.get_columns("employees")}
-        if "branch_code" not in cols:
-            db.session.execute(text("ALTER TABLE employees ADD COLUMN branch_code VARCHAR(20)"))
-        if "is_active" not in cols:
-            db.session.execute(text("ALTER TABLE employees ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
-    if "complaint_details" in inspector.get_table_names():
-        cols = {c["name"] for c in inspector.get_columns("complaint_details")}
-        if "action_type" not in cols:
-            db.session.execute(text("ALTER TABLE complaint_details ADD COLUMN action_type VARCHAR(40) DEFAULT 'note'"))
-    if "complaints" in inspector.get_table_names():
-        cols = {c["name"] for c in inspector.get_columns("complaints")}
-        if "assigned_to_code" not in cols:
-            db.session.execute(text("ALTER TABLE complaints ADD COLUMN assigned_to_code VARCHAR(20)"))
-        if "assigned_to_name" not in cols:
-            db.session.execute(text("ALTER TABLE complaints ADD COLUMN assigned_to_name VARCHAR(120)"))
-        if "serial_number" not in cols:
-            db.session.execute(text("ALTER TABLE complaints ADD COLUMN serial_number VARCHAR(24)"))
-            db.session.execute(
-                text(
-                    "UPDATE complaints SET serial_number = 'CMP-' || "
-                    "to_char(complaint_date, 'YYYYMMDD') || '-' || "
-                    "lpad(complaint_id::text, 4, '0') "
-                    "WHERE serial_number IS NULL"
-                )
+    tables = set(inspector.get_table_names())
+
+    if "admin_users" in tables:
+        db.session.execute(text("ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'admin'"))
+        db.session.execute(text("ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS employee_code VARCHAR(20)"))
+    if "employees" in tables:
+        db.session.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS branch_code VARCHAR(20)"))
+        db.session.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE"))
+    if "complaint_details" in tables:
+        db.session.execute(
+            text("ALTER TABLE complaint_details ADD COLUMN IF NOT EXISTS action_type VARCHAR(40) DEFAULT 'note'")
+        )
+    if "complaints" in tables:
+        db.session.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS assigned_to_code VARCHAR(20)"))
+        db.session.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS assigned_to_name VARCHAR(120)"))
+        db.session.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS serial_number VARCHAR(24)"))
+        db.session.execute(
+            text(
+                "UPDATE complaints SET serial_number = 'CMP-' || "
+                "to_char(complaint_date, 'YYYYMMDD') || '-' || "
+                "lpad(complaint_id::text, 4, '0') "
+                "WHERE serial_number IS NULL"
             )
-            db.session.execute(
-                text(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_complaints_serial_number "
-                    "ON complaints (serial_number)"
-                )
+        )
+        db.session.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_complaints_serial_number "
+                "ON complaints (serial_number)"
             )
+        )
         db.session.execute(
             text(
                 "UPDATE complaints SET assigned_to_code = created_by_code, "
@@ -238,7 +231,11 @@ def _migrate_schema():
                 "WHERE assigned_to_code IS NULL AND created_by_code IS NOT NULL"
             )
         )
-    db.session.commit()
+    try:
+        db.session.commit()
+    except ProgrammingError:
+        db.session.rollback()
+        raise
 
 
 def _ensure_functions():
