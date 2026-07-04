@@ -26,6 +26,34 @@ ROLE_FEATURES = {
     ROLE_ADMIN: None,  # all enabled features
 }
 
+PERMISSION_FIELDS = (
+    "can_view_reports",
+    "can_edit_functions",
+    "can_manage_users",
+    "can_export_excel",
+)
+
+ROLE_PERMISSION_DEFAULTS = {
+    ROLE_AGENT: {
+        "can_view_reports": False,
+        "can_edit_functions": False,
+        "can_manage_users": False,
+        "can_export_excel": False,
+    },
+    ROLE_SUPERVISOR: {
+        "can_view_reports": True,
+        "can_edit_functions": False,
+        "can_manage_users": False,
+        "can_export_excel": True,
+    },
+    ROLE_ADMIN: {
+        "can_view_reports": True,
+        "can_edit_functions": True,
+        "can_manage_users": True,
+        "can_export_excel": True,
+    },
+}
+
 
 def user_can_access(user, route_name):
     from app.models import SystemFunction, UserFunctionAccess
@@ -92,3 +120,84 @@ def sync_new_functions_to_users():
                     UserFunctionAccess(user_id=user.id, function_id=func.id, is_visible=visible)
                 )
     db.session.commit()
+
+
+def get_assignable_menu_groups(functions, lang="ar"):
+    """Menu items grouped for the admin permission editor."""
+    from app.services.nav import HIDDEN_ROUTES, MENU_GROUPS, ROUTE_TO_GROUP
+
+    by_group = {g[0]: [] for g in MENU_GROUPS}
+    for func in functions:
+        if not func.is_enabled or func.route_name in HIDDEN_ROUTES:
+            continue
+        group_key = ROUTE_TO_GROUP.get(func.route_name, "complaints")
+        label = func.function_name if lang == "ar" else (func.function_name_en or func.function_name)
+        by_group[group_key].append(
+            {
+                "id": func.id,
+                "route_name": func.route_name,
+                "icon": func.icon,
+                "label": label,
+            }
+        )
+
+    result = []
+    for group_key, label_key, _order in MENU_GROUPS:
+        items = sorted(by_group.get(group_key, []), key=lambda x: x["label"])
+        if items:
+            result.append({"key": group_key, "label_key": label_key, "items": items})
+    return result
+
+
+def build_role_presets(functions):
+    """Role templates for the admin UI (capabilities + menu function ids)."""
+    from app.services.nav import HIDDEN_ROUTES
+
+    enabled = [f for f in functions if f.is_enabled and f.route_name not in HIDDEN_ROUTES]
+    route_to_id = {f.route_name: f.id for f in enabled}
+    all_ids = list(route_to_id.values())
+    presets = {}
+    for role, routes in ROLE_FEATURES.items():
+        if routes is None:
+            function_ids = all_ids
+        else:
+            function_ids = [route_to_id[r] for r in routes if r in route_to_id]
+        presets[role] = {
+            "permissions": ROLE_PERMISSION_DEFAULTS.get(role, ROLE_PERMISSION_DEFAULTS[ROLE_AGENT]),
+            "functions": function_ids,
+        }
+    return presets
+
+
+def ensure_user_permissions(user):
+    from app.extensions import db
+    from app.models import UserPermission
+
+    if user.permissions:
+        return user.permissions
+    defaults = ROLE_PERMISSION_DEFAULTS.get(user.role or ROLE_AGENT, ROLE_PERMISSION_DEFAULTS[ROLE_AGENT])
+    perms = UserPermission(user_id=user.id, **defaults)
+    db.session.add(perms)
+    return perms
+
+
+def save_user_access(user, form, functions):
+    """Save per-user capability flags and menu visibility from POST data."""
+    from app.extensions import db
+    from app.models import UserFunctionAccess, UserPermission
+    from app.services.nav import HIDDEN_ROUTES
+
+    perms = ensure_user_permissions(user)
+    for field in PERMISSION_FIELDS:
+        setattr(perms, field, field in form)
+
+    enabled = [f for f in functions if f.is_enabled and f.route_name not in HIDDEN_ROUTES]
+    for func in enabled:
+        visible = f"func_{func.id}" in form
+        row = UserFunctionAccess.query.filter_by(user_id=user.id, function_id=func.id).first()
+        if row:
+            row.is_visible = visible
+        else:
+            db.session.add(
+                UserFunctionAccess(user_id=user.id, function_id=func.id, is_visible=visible)
+            )

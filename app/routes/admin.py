@@ -21,7 +21,16 @@ from werkzeug.utils import secure_filename
 from app.decorators import feature_required, permission_required
 from app.extensions import db
 from app.models import AppSetting, AuditLog, Branch, ComplaintType, Employee, SystemFunction, User, UserFunctionAccess, UserPermission
-from app.services.access import ROLE_ADMIN, ROLE_AGENT, ROLE_SUPERVISOR, apply_role_features
+from app.services.access import (
+    ROLE_ADMIN,
+    ROLE_AGENT,
+    ROLE_PERMISSION_DEFAULTS,
+    ROLE_SUPERVISOR,
+    apply_role_features,
+    build_role_presets,
+    get_assignable_menu_groups,
+    save_user_access,
+)
 from app.services.audit import log_action
 from app.services.live_monitor import build_live_feed
 
@@ -66,11 +75,14 @@ def index():
     employees = Employee.query.filter_by(is_active=True).order_by(Employee.employee_name).all()
     branches = Branch.query.order_by(Branch.branch_name).all()
     complaint_types = ComplaintType.query.order_by(ComplaintType.sort_order).all()
+    lang = session.get("lang", "ar")
     return render_template(
         "admin/index.html",
         users=users,
         functions=functions,
         access_map=access_map,
+        menu_groups=get_assignable_menu_groups(functions, lang),
+        role_presets=build_role_presets(functions),
         employees=employees,
         branches=branches,
         complaint_types=complaint_types,
@@ -100,13 +112,8 @@ def add_user():
     db.session.add(user)
     db.session.flush()
 
-    perms = {
-        ROLE_AGENT: dict(can_view_reports=False, can_edit_functions=False, can_manage_users=False, can_export_excel=False),
-        ROLE_SUPERVISOR: dict(can_view_reports=True, can_edit_functions=False, can_manage_users=False, can_export_excel=True),
-        ROLE_ADMIN: dict(can_view_reports=True, can_edit_functions=True, can_manage_users=True, can_export_excel=True),
-    }
-    p = perms.get(role, perms[ROLE_AGENT])
-    db.session.add(UserPermission(user_id=user.id, **p))
+    perms = ROLE_PERMISSION_DEFAULTS.get(role, ROLE_PERMISSION_DEFAULTS[ROLE_AGENT])
+    db.session.add(UserPermission(user_id=user.id, **perms))
     apply_role_features(user, role)
     db.session.commit()
     flash("user_created", "success")
@@ -155,13 +162,16 @@ def toggle_user_active(user_id):
 @permission_required("can_manage_users")
 def update_user_role(user_id):
     user = User.query.get_or_404(user_id)
-    role = request.form.get("role", ROLE_AGENT)
-    user.role = role
+    if user.username == "admin":
+        flash("access_denied", "error")
+        return redirect(url_for("admin.index", tab="agents"))
+    user.role = request.form.get("role", ROLE_AGENT)
     user.employee_code = request.form.get("employee_code") or None
-    apply_role_features(user, role)
+    functions = SystemFunction.query.all()
+    save_user_access(user, request.form, functions)
     db.session.commit()
     flash("permissions_updated", "success")
-    return redirect(url_for("admin.index"))
+    return redirect(url_for("admin.index", tab="agents"))
 
 
 @admin_bp.route("/permissions/<int:user_id>", methods=["POST"])
