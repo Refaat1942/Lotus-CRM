@@ -109,6 +109,11 @@ def init_db():
             print(f"Created {len(DEFAULT_FUNCTIONS)} system functions")
 
         admin = User.query.filter_by(username="admin").first()
+        if not admin:
+            print("ERROR: admin user missing. Run scripts/reset_admin.py")
+            db.session.commit()
+            return
+
         for func in SystemFunction.query.all():
             exists = UserFunctionAccess.query.filter_by(
                 user_id=admin.id, function_id=func.id

@@ -26,8 +26,8 @@ class User(UserMixin, db.Model):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        if self.password_hash.startswith("$"):
-            return check_password_hash(self.password_hash, password)
+        if check_password_hash(self.password_hash, password):
+            return True
         import hashlib
 
         return self.password_hash == hashlib.sha256(password.encode()).hexdigest()
