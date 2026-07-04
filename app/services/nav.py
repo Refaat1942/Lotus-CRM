@@ -1,5 +1,7 @@
 """Sidebar navigation grouped by module."""
 
+from flask import current_app
+
 from app.models import SystemFunction, UserFunctionAccess
 
 HIDDEN_ROUTES = {
@@ -30,6 +32,10 @@ ROUTE_TO_GROUP = {
 }
 
 
+def _route_registered(route_name):
+    return route_name in current_app.view_functions
+
+
 def get_nav_groups(user, lang="ar"):
     if not user or not user.is_authenticated:
         return []
@@ -48,7 +54,7 @@ def get_nav_groups(user, lang="ar"):
     for row in rows:
         func = row.function
         route = func.route_name
-        if route in HIDDEN_ROUTES or route in seen_routes:
+        if route in HIDDEN_ROUTES or route in seen_routes or not _route_registered(route):
             continue
         seen_routes.add(route)
         group_key = ROUTE_TO_GROUP.get(route, "complaints")

@@ -1,6 +1,9 @@
 """In-app alerts for complaints needing agent action."""
 from datetime import datetime, timedelta
 
+from sqlalchemy.exc import OperationalError, ProgrammingError
+
+from app.extensions import db
 from app.models import AppSetting, Complaint
 from app.services.complaints import complaint_display_number, my_complaints_filter
 from app.services.i18n import translate_status, translate_urgency
@@ -24,7 +27,28 @@ def _notify_assigned_only(user):
     return AppSetting.get("notify_assigned_only", "0") == "1"
 
 
+def _empty_notifications():
+    return {
+        "count": 0,
+        "my_open": 0,
+        "alerts": [],
+        "criteria": {
+            "stale_hours": _stale_hours(),
+            "immediate": _notify_immediate_enabled(),
+            "assigned_only": False,
+        },
+    }
+
+
 def build_notifications(user, lang="ar"):
+    try:
+        return _build_notifications(user, lang)
+    except (ProgrammingError, OperationalError):
+        db.session.rollback()
+        return _empty_notifications()
+
+
+def _build_notifications(user, lang="ar"):
     now = datetime.now()
     stale_cutoff = now - timedelta(hours=_stale_hours())
     alerts = []

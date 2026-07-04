@@ -96,4 +96,12 @@ def create_app(config_class=Config):
 
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(app.instance_path, exist_ok=True)
+
+    from app.services.migrate import run_startup_migrations
+
+    try:
+        run_startup_migrations(app)
+    except Exception as exc:
+        app.logger.error("Startup schema migration failed: %s", exc)
+
     return app
