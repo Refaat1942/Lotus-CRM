@@ -12,8 +12,8 @@ def permission_required(flag_name):
                 return redirect(url_for("auth.login"))
             perms = current_user.permissions
             if not perms or not getattr(perms, flag_name, False):
-                flash("Access denied.", "error")
-                return redirect(url_for("main.dashboard"))
+                flash("access_denied", "error")
+                return redirect(url_for("main.agent_home"))
             return fn(*args, **kwargs)
 
         return wrapper
@@ -27,20 +27,11 @@ def feature_required(route_name):
         def wrapper(*args, **kwargs):
             if not current_user.is_authenticated:
                 return redirect(url_for("auth.login"))
-            from app.models import SystemFunction, UserFunctionAccess
+            from app.services.access import user_can_access
 
-            func = SystemFunction.query.filter_by(route_name=route_name, is_enabled=True).first()
-            if not func:
-                abort(404)
-            access = UserFunctionAccess.query.filter_by(
-                user_id=current_user.id, function_id=func.id
-            ).first()
-            if access and not access.is_visible:
-                flash("This feature is not available for your account.", "error")
-                return redirect(url_for("main.dashboard"))
-            if not access:
-                flash("This feature is not available for your account.", "error")
-                return redirect(url_for("main.dashboard"))
+            if not user_can_access(current_user, route_name):
+                flash("feature_denied", "error")
+                return redirect(url_for("main.agent_home"))
             return fn(*args, **kwargs)
 
         return wrapper

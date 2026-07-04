@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ t('my_complaints') }} - {{ brand }}{% endblock %}
+{% block content %}
+<h1 class="page-title">📌 {{ t('my_complaints') }} — {{ agent_name }}</h1>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>{{ t('complaint_id') }}</th>
+            <th>{{ t('phone') }}</th>
+            <th>{{ t('complaint_type') }}</th>
+            <th>{{ t('status') }}</th>
+            <th>{{ t('branch') }}</th>
+            <th>{{ t('date') }}</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for c in rows %}
+    <tr>
+        <td>#{{ c.complaint_id }}</td>
+        <td>{{ c.phone_number }}</td>
+        <td>{{ t_type(c.complaint_type) }}</td>
+        <td>{{ t_status(c.complaint_status) }}</td>
+        <td>{{ c.branch.branch_name if c.branch else c.branch_code }}</td>
+        <td>{{ c.complaint_date.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td><a href="{{ url_for('complaints.complaint_detail', complaint_id=c.complaint_id) }}" class="btn btn-sm">{{ t('details') }}</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">{{ t('no_data') }}</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -6,9 +6,10 @@
     <div class="detail-card">
         <p><strong>{{ t('phone') }}:</strong> {{ complaint.phone_number }}</p>
         <p><strong>{{ t('branch') }}:</strong> {{ complaint.branch.branch_name if complaint.branch else complaint.branch_code }}</p>
-        <p><strong>{{ t('complaint_type') }}:</strong> {{ complaint.complaint_type }}</p>
-        <p><strong>{{ t('status') }}:</strong> {{ complaint.complaint_status }}</p>
-        <p><strong>{{ t('shift') }}:</strong> {{ complaint.shift }}</p>
+        <p><strong>{{ t('complaint_type') }}:</strong> {{ t_type(complaint.complaint_type) }}</p>
+        <p><strong>{{ t('status') }}:</strong> <span class="badge">{{ t_status(complaint.complaint_status) }}</span></p>
+        <p><strong>{{ t('shift') }}:</strong> {{ t_shift(complaint.shift) }}</p>
+        <p><strong>{{ t('creator') }}:</strong> {{ complaint.created_by_name }}</p>
         <p><strong>{{ t('complaint_text') }}:</strong></p>
         <div class="text-box">{{ complaint.complaint_text }}</div>
     </div>
@@ -17,26 +18,25 @@
             <input type="hidden" name="action" value="status">
             <label>{{ t('update_status') }}</label>
             <select name="status">
-                {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==complaint.complaint_status else '' }}>{{ s }}</option>{% endfor %}
+                {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==complaint.complaint_status else '' }}>{{ t_status(s) }}</option>{% endfor %}
             </select>
             <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
         </form>
         <hr>
         <form method="POST">
             <input type="hidden" name="action" value="note">
-            <label>{{ t('details') }}</label>
-            <select name="modifier">
-                {% for e in employees %}<option value="{{ e }}">{{ e }}</option>{% endfor %}
-            </select>
-            <textarea name="detail_text" rows="3" required></textarea>
+            <label>{{ t('add_note') }}</label>
+            <input type="hidden" name="modifier" value="{{ default_modifier }}">
+            <p class="hint">{{ t('modifier') }}: {{ default_modifier }}</p>
+            <textarea name="detail_text" rows="3" required placeholder="{{ t('note_text') }}"></textarea>
             <button type="submit" class="btn btn-secondary">{{ t('save') }}</button>
         </form>
     </div>
 </div>
 {% if complaint.details %}
-<h2>{{ t('details') }}</h2>
+<h2 class="section-title">{{ t('details') }}</h2>
 <table class="data-table">
-    <thead><tr><th>Date</th><th>Modifier</th><th>Text</th></tr></thead>
+    <thead><tr><th>{{ t('date') }}</th><th>{{ t('modifier') }}</th><th>{{ t('text') }}</th></tr></thead>
     <tbody>
     {% for d in complaint.details %}
     <tr><td>{{ d.detail_date.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ d.modifier }}</td><td>{{ d.detail_text }}</td></tr>
@@ -44,5 +44,5 @@
     </tbody>
 </table>
 {% endif %}
-<a href="{{ url_for('complaints.list_complaints') }}" class="btn btn-outline">← {{ t('view_complaints') }}</a>
+<a href="{{ url_for('complaints.list_complaints') }}" class="btn btn-outline-dark">{{ t('back') }}</a>
 {% endblock %}

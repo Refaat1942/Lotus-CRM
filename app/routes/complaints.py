@@ -1,12 +1,13 @@
 from datetime import datetime
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 
 from app.decorators import feature_required
 from app.extensions import db
 from app.models import Branch, Complaint, ComplaintDetail, Customer, Employee
 from app.services.email import send_complaint_notification
+from app.services.i18n import translate_complaint_type, translate_shift, translate_status
 
 complaints_bp = Blueprint("complaints", __name__)
 
@@ -32,24 +33,39 @@ def _shift(now=None):
     return "After"
 
 
+def _agent_employee():
+    if current_user.employee:
+        return current_user.employee
+    if current_user.employee_code:
+        return Employee.query.get(current_user.employee_code)
+    return None
+
+
+def _agent_name():
+    emp = _agent_employee()
+    return emp.employee_name if emp else current_user.username
+
+
 @complaints_bp.route("/new", methods=["GET", "POST"])
 @login_required
 @feature_required("complaints.new_complaint")
 def new_complaint():
-    employees = Employee.query.order_by(Employee.employee_name).all()
+    employees = Employee.query.filter_by(is_active=True).order_by(Employee.employee_name).all()
     branches = Branch.query.order_by(Branch.branch_name).all()
+    agent = _agent_employee()
+    prefill_phone = request.args.get("phone", "")
 
     if request.method == "POST":
-        emp_code = request.form.get("employee_code")
-        branch_code = request.form.get("branch_code")
+        emp_code = request.form.get("employee_code") or (agent.employee_code if agent else None)
+        branch_code = request.form.get("branch_code") or (agent.branch_code if agent else None)
         phone = request.form.get("phone", "").strip()
         ctype = request.form.get("complaint_type")
         text = request.form.get("complaint_text", "").strip()
         channel = request.form.get("online_channel") if ctype == "مشكلة اون لاين" else None
 
         if not all([emp_code, branch_code, phone, text]):
-            flash("Please fill all required fields.", "error")
-            return redirect(url_for("complaints.new_complaint"))
+            flash("required_fields", "error")
+            return redirect(url_for("complaints.new_complaint", phone=phone))
 
         emp = Employee.query.get(emp_code)
         now = datetime.now()
@@ -61,7 +77,7 @@ def new_complaint():
             complaint_date=now,
             complaint_status="مفتوحة",
             created_by_code=emp_code,
-            created_by_name=emp.employee_name if emp else emp_code,
+            created_by_name=emp.employee_name if emp else _agent_name(),
             branch_code=branch_code,
             shift=_shift(now),
         )
@@ -78,11 +94,11 @@ def new_complaint():
                 f"Text:\n{text}"
             )
             send_complaint_notification(branch_code, details)
-        except Exception as exc:
-            flash(f"Complaint saved but email failed: {exc}", "warning")
+        except Exception:
+            flash("email_failed", "warning")
 
         flash("complaint_saved", "success")
-        return redirect(url_for("complaints.new_complaint"))
+        return redirect(url_for("complaints.complaint_detail", complaint_id=complaint.complaint_id))
 
     return render_template(
         "complaints/new.html",
@@ -90,11 +106,14 @@ def new_complaint():
         branches=branches,
         complaint_types=COMPLAINT_TYPES,
         online_channels=ONLINE_CHANNELS,
+        agent=agent,
+        prefill_phone=prefill_phone,
     )
 
 
 @complaints_bp.route("/api/customer/<phone>")
 @login_required
+@feature_required("complaints.new_complaint")
 def lookup_customer(phone):
     cust = Customer.query.filter_by(phone_number=phone).first()
     if not cust:
@@ -122,8 +141,7 @@ def list_complaints():
 @login_required
 @feature_required("complaints.list_complaints")
 def search_complaints():
-    from sqlalchemy import and_
-
+    lang = session.get("lang", "ar")
     date_from = request.args.get("from")
     date_to = request.args.get("to")
     status = request.args.get("status", "الكل")
@@ -166,11 +184,14 @@ def search_complaints():
                 "phone": c.phone_number,
                 "customer": cust_name,
                 "type": c.complaint_type,
+                "type_label": translate_complaint_type(c.complaint_type, lang),
                 "date": c.complaint_date.strftime("%Y-%m-%d %H:%M"),
                 "status": c.complaint_status,
+                "status_label": translate_status(c.complaint_status, lang),
                 "branch": c.branch.branch_name if c.branch else c.branch_code,
                 "creator": c.created_by_name,
                 "shift": c.shift,
+                "shift_label": translate_shift(c.shift, lang),
                 "alert": alert,
             }
         )
@@ -182,7 +203,6 @@ def search_complaints():
 @feature_required("complaints.list_complaints")
 def complaint_detail(complaint_id):
     complaint = Complaint.query.get_or_404(complaint_id)
-    employees = [e.employee_name for e in Employee.query.all()]
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -192,22 +212,40 @@ def complaint_detail(complaint_id):
         elif action == "note":
             detail = ComplaintDetail(
                 complaint_id=complaint_id,
-                modifier=request.form.get("modifier", current_user.username),
+                modifier=request.form.get("modifier", _agent_name()),
                 detail_text=request.form.get("detail_text", ""),
             )
             db.session.add(detail)
         db.session.commit()
-        flash("Updated.", "success")
+        flash("updated", "success")
         return redirect(url_for("complaints.complaint_detail", complaint_id=complaint_id))
 
     cust = Customer.query.filter_by(phone_number=complaint.phone_number).first()
+    default_modifier = _agent_name()
     return render_template(
         "complaints/detail.html",
         complaint=complaint,
         customer=cust,
-        employees=employees,
+        default_modifier=default_modifier,
         statuses=STATUSES,
     )
+
+
+@complaints_bp.route("/my")
+@login_required
+@feature_required("complaints.my_complaints")
+def my_complaints():
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    name = _agent_name()
+    rows = (
+        Complaint.query.filter(
+            Complaint.created_by_name == name,
+            Complaint.complaint_date >= today_start,
+        )
+        .order_by(Complaint.complaint_date.desc())
+        .all()
+    )
+    return render_template("complaints/my.html", rows=rows, agent_name=name)
 
 
 @complaints_bp.route("/dashboard")
@@ -242,7 +280,7 @@ def dashboard_stats():
     if status and status != "الكل":
         q = q.filter(Complaint.complaint_status == status)
     q = q.group_by(Complaint.complaint_status)
-    data = [{"status": r[0], "count": r[1]} for r in q.all()]
+    data = [{"status": r[0], "status_label": translate_status(r[0], session.get("lang", "ar")), "count": r[1]} for r in q.all()]
     return jsonify(data)
 
 

@@ -2,7 +2,7 @@
 {% block title %}{{ t('reports') }} - {{ brand }}{% endblock %}
 {% block content %}
 <h1 class="page-title">📊 {{ t('reports') }}</h1>
-<div class="feature-grid small">
+<div class="feature-grid">
     <a href="{{ url_for('reports.complaints_report') }}" class="feature-card" style="--card-color:#0288d1">
         <span class="feature-icon">📋</span><span class="feature-name">{{ t('complaints_report') }}</span>
     </a>

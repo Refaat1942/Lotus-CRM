@@ -1,6 +1,8 @@
-"""Initialize database with schema, admin user, and default features."""
+"""Initialize database, migrate schema, seed features and admin user."""
 import os
 import sys
+
+from sqlalchemy import inspect, text
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -15,9 +17,17 @@ from app.models import (
     UserFunctionAccess,
     UserPermission,
 )
-
+from app.services.access import ROLE_ADMIN, apply_role_features, sync_new_functions_to_users
 
 DEFAULT_FUNCTIONS = [
+    {
+        "function_name": "لوحة الوكيل",
+        "function_name_en": "Agent Dashboard",
+        "route_name": "main.agent_home",
+        "icon": "🏠",
+        "color_hex": "#00796B",
+        "sort_order": 0,
+    },
     {
         "function_name": "تسجيل شكوى",
         "function_name_en": "New Complaint",
@@ -27,12 +37,44 @@ DEFAULT_FUNCTIONS = [
         "sort_order": 1,
     },
     {
-        "function_name": "عرض الشكاوى",
-        "function_name_en": "View Complaints",
+        "function_name": "جميع الشكاوى",
+        "function_name_en": "All Complaints",
         "route_name": "complaints.list_complaints",
         "icon": "📋",
         "color_hex": "#7B1FA2",
         "sort_order": 2,
+    },
+    {
+        "function_name": "شكاوىي اليوم",
+        "function_name_en": "My Complaints Today",
+        "route_name": "complaints.my_complaints",
+        "icon": "📌",
+        "color_hex": "#00897B",
+        "sort_order": 3,
+    },
+    {
+        "function_name": "بحث عميل",
+        "function_name_en": "Search Customer",
+        "route_name": "customers.search",
+        "icon": "🔍",
+        "color_hex": "#0288D1",
+        "sort_order": 4,
+    },
+    {
+        "function_name": "إضافة عميل",
+        "function_name_en": "Add Customer",
+        "route_name": "customers.add",
+        "icon": "👤",
+        "color_hex": "#0097A7",
+        "sort_order": 5,
+    },
+    {
+        "function_name": "قاعدة المعرفة",
+        "function_name_en": "Knowledge Base",
+        "route_name": "knowledge.index",
+        "icon": "💊",
+        "color_hex": "#00695C",
+        "sort_order": 6,
     },
     {
         "function_name": "لوحة الشكاوى",
@@ -40,31 +82,31 @@ DEFAULT_FUNCTIONS = [
         "route_name": "complaints.dashboard",
         "icon": "📊",
         "color_hex": "#512DA8",
-        "sort_order": 3,
+        "sort_order": 7,
     },
     {
         "function_name": "لوحة الفروع",
         "function_name_en": "Branch Dashboard",
         "route_name": "complaints.branch_dashboard",
         "icon": "🏢",
-        "color_hex": "#0288D1",
-        "sort_order": 4,
-    },
-    {
-        "function_name": "قاعدة المعرفة",
-        "function_name_en": "Knowledge Base",
-        "route_name": "knowledge.index",
-        "icon": "💊",
-        "color_hex": "#00796B",
-        "sort_order": 5,
+        "color_hex": "#3949AB",
+        "sort_order": 8,
     },
     {
         "function_name": "التقارير",
         "function_name_en": "Reports",
         "route_name": "reports.index",
         "icon": "📈",
-        "color_hex": "#3949AB",
-        "sort_order": 6,
+        "color_hex": "#5E35B1",
+        "sort_order": 9,
+    },
+    {
+        "function_name": "لوحة الإدارة",
+        "function_name_en": "Admin Panel",
+        "route_name": "admin.index",
+        "icon": "⚙️",
+        "color_hex": "#455A64",
+        "sort_order": 10,
     },
 ]
 
@@ -75,19 +117,48 @@ SAMPLE_BRANCHES = [
 ]
 
 SAMPLE_EMPLOYEES = [
-    ("E001", "Ahmed Hassan"),
-    ("E002", "Sara Mohamed"),
-    ("E003", "Omar Ali"),
+    ("E001", "Ahmed Hassan", "B001"),
+    ("E002", "Sara Mohamed", "B002"),
+    ("E003", "Omar Ali", "B003"),
 ]
+
+
+def _migrate_schema():
+    inspector = inspect(db.engine)
+    if "admin_users" in inspector.get_table_names():
+        cols = {c["name"] for c in inspector.get_columns("admin_users")}
+        if "role" not in cols:
+            db.session.execute(text("ALTER TABLE admin_users ADD COLUMN role VARCHAR(20) DEFAULT 'admin'"))
+        if "employee_code" not in cols:
+            db.session.execute(text("ALTER TABLE admin_users ADD COLUMN employee_code VARCHAR(20)"))
+    if "employees" in inspector.get_table_names():
+        cols = {c["name"] for c in inspector.get_columns("employees")}
+        if "branch_code" not in cols:
+            db.session.execute(text("ALTER TABLE employees ADD COLUMN branch_code VARCHAR(20)"))
+        if "is_active" not in cols:
+            db.session.execute(text("ALTER TABLE employees ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
+    db.session.commit()
+
+
+def _ensure_functions():
+    existing = {f.route_name for f in SystemFunction.query.all()}
+    for fn in DEFAULT_FUNCTIONS:
+        if fn["route_name"] not in existing:
+            db.session.add(SystemFunction(**fn, is_enabled=True))
+    db.session.commit()
 
 
 def init_db():
     app = create_app()
     with app.app_context():
+        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
         db.create_all()
+        _migrate_schema()
+        _ensure_functions()
 
-        if not User.query.filter_by(username="admin").first():
-            admin = User(username="admin")
+        admin = User.query.filter_by(username="admin").first()
+        if not admin:
+            admin = User(username="admin", role=ROLE_ADMIN)
             admin.set_password("admin")
             db.session.add(admin)
             db.session.flush()
@@ -101,27 +172,10 @@ def init_db():
                 )
             )
             print("Created admin user (username: admin, password: admin)")
+        else:
+            admin.role = ROLE_ADMIN
 
-        if SystemFunction.query.count() == 0:
-            for fn in DEFAULT_FUNCTIONS:
-                db.session.add(SystemFunction(**fn, is_enabled=True))
-            db.session.flush()
-            print(f"Created {len(DEFAULT_FUNCTIONS)} system functions")
-
-        admin = User.query.filter_by(username="admin").first()
-        if not admin:
-            print("ERROR: admin user missing. Run scripts/reset_admin.py")
-            db.session.commit()
-            return
-
-        for func in SystemFunction.query.all():
-            exists = UserFunctionAccess.query.filter_by(
-                user_id=admin.id, function_id=func.id
-            ).first()
-            if not exists:
-                db.session.add(
-                    UserFunctionAccess(user_id=admin.id, function_id=func.id, is_visible=True)
-                )
+        apply_role_features(admin, ROLE_ADMIN)
 
         if Branch.query.count() == 0:
             for code, name, mgr, area, sales in SAMPLE_BRANCHES:
@@ -136,8 +190,10 @@ def init_db():
                 )
 
         if Employee.query.count() == 0:
-            for code, name in SAMPLE_EMPLOYEES:
-                db.session.add(Employee(employee_code=code, employee_name=name))
+            for code, name, branch in SAMPLE_EMPLOYEES:
+                db.session.add(
+                    Employee(employee_code=code, employee_name=name, branch_code=branch, is_active=True)
+                )
 
         defaults = {
             "brand_name": "Lotus CRM",
@@ -146,12 +202,14 @@ def init_db():
             "smtp_host": "",
             "smtp_port": "587",
             "use_graph_api": "0",
+            "logo_path": "",
         }
         for key, val in defaults.items():
             if not AppSetting.query.filter_by(key=key).first():
                 db.session.add(AppSetting(key=key, value=val))
 
         db.session.commit()
+        sync_new_functions_to_users()
         print("Database initialized successfully.")
 
 

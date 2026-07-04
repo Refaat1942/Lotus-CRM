@@ -2,18 +2,18 @@
 {% block title %}{{ t('complaints_dashboard') }} - {{ brand }}{% endblock %}
 {% block content %}
 <h1 class="page-title">📊 {{ t('complaints_dashboard') }}</h1>
-<div class="filter-bar">
+<div class="filter-bar form-card">
     <input type="date" id="from"><input type="date" id="to">
     <select id="branch"><option value="الكل">{{ t('all_branches') }}</option>
         {% for b in branches %}<option value="{{ b.branch_code }}">{{ b.branch_name }}</option>{% endfor %}
     </select>
     <select id="status"><option value="الكل">{{ t('all_statuses') }}</option>
-        {% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+        {% for s in statuses %}<option value="{{ s }}">{{ t_status(s) }}</option>{% endfor %}
     </select>
     <button class="btn btn-primary" onclick="loadStats()">{{ t('search') }}</button>
 </div>
 <div class="chart-container"><canvas id="chart"></canvas></div>
-<div id="stats-table" class="stats-grid"></div>
+<div id="stats-table" class="stats-row"></div>
 {% endblock %}
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -22,26 +22,22 @@ let chart;
 const today = new Date().toISOString().slice(0,10);
 document.getElementById('from').value = today;
 document.getElementById('to').value = today;
-
 async function loadStats() {
     const params = new URLSearchParams({
-        from: document.getElementById('from').value,
-        to: document.getElementById('to').value,
-        branch: document.getElementById('branch').value,
-        status: document.getElementById('status').value,
+        from: document.getElementById('from').value, to: document.getElementById('to').value,
+        branch: document.getElementById('branch').value, status: document.getElementById('status').value,
     });
-    const res = await fetch('/complaints/api/dashboard-stats?' + params);
+    const res = await fetch('{{ url_for("complaints.dashboard_stats") }}?' + params);
     const data = await res.json();
-    const labels = data.map(d => d.status);
-    const counts = data.map(d => d.count);
+    const labels = data.map(d => d.status_label || d.status);
     if (chart) chart.destroy();
     chart = new Chart(document.getElementById('chart'), {
         type: 'pie',
-        data: { labels, datasets: [{ data: counts, backgroundColor: ['#512DA8','#00796b','#E53935','#FB8C00'] }] },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        data: { labels, datasets: [{ data: data.map(d=>d.count), backgroundColor: ['#512DA8','#00796b','#E53935','#FB8C00'] }] },
+        options: { responsive: true }
     });
     document.getElementById('stats-table').innerHTML = data.map(d =>
-        `<div class="stat-card"><span class="stat-value">${d.count}</span><span class="stat-label">${d.status}</span></div>`
+        `<div class="stat-card"><span class="stat-value">${d.count}</span><span class="stat-label">${d.status_label||d.status}</span></div>`
     ).join('');
 }
 loadStats();

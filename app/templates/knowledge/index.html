@@ -3,53 +3,55 @@
 {% block content %}
 <h1 class="page-title">💊 {{ t('knowledge_base') }}</h1>
 <div class="tabs">
-    <button class="tab active" onclick="showTab('search')">🔍 {{ t('search') }}</button>
-    <button class="tab" onclick="showTab('alt')">💊 Alternatives</button>
+    <button class="tab active" onclick="showTab('search', this)">🔍 {{ t('search') }}</button>
+    <button class="tab" onclick="showTab('alt', this)">💊 {{ t('alternatives') }}</button>
 </div>
 <div id="tab-search" class="tab-panel">
-    <div class="filter-bar">
-        <input type="text" id="search-q" placeholder="Item code or name..." onkeydown="if(event.key==='Enter')doSearch()">
+    <div class="filter-bar form-card">
+        <input type="text" id="search-q" placeholder="{{ t('item_code') }} / {{ t('item_name') }}" onkeydown="if(event.key==='Enter')doSearch()">
         <button class="btn btn-primary" onclick="doSearch()">{{ t('search') }}</button>
     </div>
     <table class="data-table" id="search-table">
-        <thead><tr><th>Code</th><th>Name</th><th>Ingredient</th><th>Use</th></tr></thead>
+        <thead><tr><th>{{ t('item_code') }}</th><th>{{ t('item_name') }}</th><th>{{ t('ingredient') }}</th><th>{{ t('medical_use') }}</th></tr></thead>
         <tbody></tbody>
     </table>
 </div>
 <div id="tab-alt" class="tab-panel" style="display:none">
-    <div class="filter-bar">
-        <input type="text" id="alt-q" placeholder="Active ingredient...">
+    <div class="filter-bar form-card">
+        <input type="text" id="alt-q" placeholder="{{ t('ingredient') }}">
         <button class="btn btn-primary" onclick="doAlt()">{{ t('search') }}</button>
     </div>
     <table class="data-table" id="alt-table">
-        <thead><tr><th>Code</th><th>Name</th><th>Ingredient</th></tr></thead>
+        <thead><tr><th>{{ t('item_code') }}</th><th>{{ t('item_name') }}</th><th>{{ t('ingredient') }}</th></tr></thead>
         <tbody></tbody>
     </table>
 </div>
 {% endblock %}
 {% block extra_js %}
 <script>
-function showTab(name) {
+const SEARCH_URL = {{ url_for('knowledge.search')|tojson }};
+const ALT_URL = {{ url_for('knowledge.alternatives')|tojson }};
+function showTab(name, btn) {
     document.querySelectorAll('.tab-panel').forEach(p => p.style.display='none');
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.getElementById('tab-'+name).style.display='block';
-    event.target.classList.add('active');
+    btn.classList.add('active');
 }
 async function doSearch() {
     const q = document.getElementById('search-q').value;
-    const res = await fetch('/knowledge/api/search?q='+encodeURIComponent(q));
+    const res = await fetch(SEARCH_URL + '?q=' + encodeURIComponent(q));
     const rows = await res.json();
     document.querySelector('#search-table tbody').innerHTML = rows.map(r =>
-        `<tr><td>${r.item_code}</td><td>${r.item_name}</td><td>${r.active_ingredient||''}</td><td>${r.medical_use||''}</td></tr>`
-    ).join('');
+        `<tr><td>${r.item_code||''}</td><td>${r.item_name||''}</td><td>${r.active_ingredient||''}</td><td>${r.medical_use||''}</td></tr>`
+    ).join('') || `<tr><td colspan="4">{{ t('no_data') }}</td></tr>`;
 }
 async function doAlt() {
     const q = document.getElementById('alt-q').value;
-    const res = await fetch('/knowledge/api/alternatives?ingredient='+encodeURIComponent(q));
+    const res = await fetch(ALT_URL + '?ingredient=' + encodeURIComponent(q));
     const rows = await res.json();
     document.querySelector('#alt-table tbody').innerHTML = rows.map(r =>
-        `<tr><td>${r.item_code}</td><td>${r.item_name}</td><td>${r.active_ingredient||''}</td></tr>`
-    ).join('');
+        `<tr><td>${r.item_code||''}</td><td>${r.item_name||''}</td><td>${r.active_ingredient||''}</td></tr>`
+    ).join('') || `<tr><td colspan="3">{{ t('no_data') }}</td></tr>`;
 }
 </script>
 {% endblock %}

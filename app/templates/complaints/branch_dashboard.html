@@ -2,30 +2,30 @@
 {% block title %}{{ t('branch_dashboard') }} - {{ brand }}{% endblock %}
 {% block content %}
 <h1 class="page-title">🏢 {{ t('branch_dashboard') }}</h1>
-<div class="filter-bar">
+<div class="filter-bar form-card">
     <input type="date" id="from"><input type="date" id="to">
     <button class="btn btn-primary" onclick="loadBranchStats()">{{ t('search') }}</button>
 </div>
 <div class="chart-container"><canvas id="chart"></canvas></div>
-<table class="data-table" id="branch-table"><thead><tr><th>{{ t('branch') }}</th><th>Count</th></tr></thead><tbody></tbody></table>
+<table class="data-table" id="branch-table">
+    <thead><tr><th>{{ t('branch') }}</th><th>{{ t('count') }}</th></tr></thead>
+    <tbody></tbody>
+</table>
 {% endblock %}
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-let chart;
-const today = new Date().toISOString().slice(0,10);
-document.getElementById('from').value = today;
-document.getElementById('to').value = today;
-
+let chart; const today = new Date().toISOString().slice(0,10);
+document.getElementById('from').value = today; document.getElementById('to').value = today;
 async function loadBranchStats() {
     const params = new URLSearchParams({ from: document.getElementById('from').value, to: document.getElementById('to').value });
-    const res = await fetch('/complaints/api/branch-stats?' + params);
+    const res = await fetch('{{ url_for("complaints.branch_stats") }}?' + params);
     const data = await res.json();
     document.querySelector('#branch-table tbody').innerHTML = data.map(d => `<tr><td>${d.branch}</td><td>${d.count}</td></tr>`).join('');
     if (chart) chart.destroy();
     chart = new Chart(document.getElementById('chart'), {
         type: 'bar',
-        data: { labels: data.map(d=>d.branch), datasets: [{ label: 'Complaints', data: data.map(d=>d.count), backgroundColor: 'var(--primary)' }] },
+        data: { labels: data.map(d=>d.branch), datasets: [{ label: '{{ t("complaints_report") }}', data: data.map(d=>d.count), backgroundColor: 'var(--primary)' }] },
         options: { responsive: true, indexAxis: 'y' }
     });
 }

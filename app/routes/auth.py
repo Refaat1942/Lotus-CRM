@@ -10,14 +10,14 @@ auth_bp = Blueprint("auth", __name__)
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for("main.agent_home"))
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         user = User.query.filter_by(username=username, is_active=True).first()
         if user and user.check_password(password):
             login_user(user, remember=True)
-            return redirect(url_for("main.dashboard"))
+            return redirect(url_for("main.agent_home"))
         flash("invalid_credentials", "error")
     return render_template("auth/login.html")
 
@@ -33,4 +33,4 @@ def logout():
 def set_language(lang):
     if lang in ("ar", "en"):
         session["lang"] = lang
-    return redirect(request.referrer or url_for("main.dashboard"))
+    return redirect(request.referrer or url_for("main.agent_home"))

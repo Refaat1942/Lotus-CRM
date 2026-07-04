@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ t('add_customer') }} - {{ brand }}{% endblock %}
+{% block content %}
+<h1 class="page-title">👤 {{ t('add_customer') }}</h1>
+<form method="POST" class="form-card">
+    <div class="form-grid">
+        <div class="form-group"><label>{{ t('first_name') }}</label><input name="first_name" required></div>
+        <div class="form-group"><label>{{ t('last_name') }}</label><input name="last_name" required></div>
+        <div class="form-group"><label>{{ t('phone') }} *</label><input name="phone_number" value="{{ prefill_phone }}" required></div>
+        <div class="form-group"><label>{{ t('city') }}</label><input name="city"></div>
+        <div class="form-group"><label>{{ t('region') }}</label><input name="region"></div>
+    </div>
+    <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
+    <a href="{{ url_for('customers.search') }}" class="btn btn-secondary">{{ t('back') }}</a>
+</form>
+{% endblock %}

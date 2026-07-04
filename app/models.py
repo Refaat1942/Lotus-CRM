@@ -12,6 +12,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(20), default="agent")
+    employee_code = db.Column(db.String(20), db.ForeignKey("employees.employee_code"), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -21,6 +23,7 @@ class User(UserMixin, db.Model):
     function_access = db.relationship(
         "UserFunctionAccess", back_populates="user", cascade="all, delete-orphan"
     )
+    employee = db.relationship("Employee", foreign_keys=[employee_code])
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -93,6 +96,8 @@ class Employee(db.Model):
 
     employee_code = db.Column(db.String(20), primary_key=True)
     employee_name = db.Column(db.String(120), nullable=False)
+    branch_code = db.Column(db.String(20), db.ForeignKey("branches.branch_code"), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
 
 
 class Customer(db.Model):
