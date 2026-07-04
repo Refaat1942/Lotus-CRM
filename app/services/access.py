@@ -138,12 +138,13 @@ def get_assignable_menu_groups(functions, lang="ar"):
                 "route_name": func.route_name,
                 "icon": func.icon,
                 "label": label,
+                "sort_order": func.sort_order,
             }
         )
 
     result = []
     for group_key, label_key, _order in MENU_GROUPS:
-        items = sorted(by_group.get(group_key, []), key=lambda x: x["label"])
+        items = sorted(by_group.get(group_key, []), key=lambda x: x["sort_order"])
         if items:
             result.append({"key": group_key, "label_key": label_key, "items": items})
     return result

@@ -64,6 +64,8 @@ def _settings_dict():
 @feature_required("admin.index")
 @permission_required("can_manage_users")
 def index():
+    if request.args.get("tab") == "access":
+        return redirect(url_for("admin.index", tab="agents"))
     users = User.query.order_by(User.username).all()
     functions = SystemFunction.query.order_by(SystemFunction.sort_order).all()
     access_map = {}
@@ -99,7 +101,6 @@ def add_user():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
     role = request.form.get("role", ROLE_AGENT)
-    employee_code = request.form.get("employee_code") or None
     if not username or not password:
         flash("required_fields", "error")
         return redirect(url_for("admin.index"))
@@ -107,7 +108,7 @@ def add_user():
         flash("customer_exists", "error")
         return redirect(url_for("admin.index"))
 
-    user = User(username=username, role=role, employee_code=employee_code)
+    user = User(username=username, role=role)
     user.set_password(password)
     db.session.add(user)
     db.session.flush()
@@ -166,7 +167,6 @@ def update_user_role(user_id):
         flash("access_denied", "error")
         return redirect(url_for("admin.index", tab="agents"))
     user.role = request.form.get("role", ROLE_AGENT)
-    user.employee_code = request.form.get("employee_code") or None
     functions = SystemFunction.query.all()
     save_user_access(user, request.form, functions)
     db.session.commit()

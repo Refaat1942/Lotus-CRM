@@ -10,7 +10,6 @@
     <a href="?tab=import" class="{{ 'active' if request.args.get('tab')=='import' else '' }}">{{ t('upload_excel') }}</a>
     <a href="?tab=settings" class="{{ 'active' if request.args.get('tab','settings')=='settings' else '' }}">{{ t('settings') }}</a>
     <a href="?tab=branding" class="{{ 'active' if request.args.get('tab')=='branding' else '' }}">{{ t('branding') }}</a>
-    <a href="?tab=access" class="{{ 'active' if request.args.get('tab')=='access' else '' }}">{{ t('feature_access') }}</a>
     <a href="{{ url_for('admin.audit_logs') }}">{{ t('audit_logs') }}</a>
 </div>
 
@@ -18,11 +17,6 @@
 
 {% if tab == 'agents' or tab == 'users' %}
 <div class="users-admin">
-    <div class="users-admin-header">
-        <h2 class="panel-title">👤 {{ t('user_management') }}</h2>
-        <p class="subtitle">{{ t('user_management_hint') }}</p>
-    </div>
-
     <section class="panel users-add-panel">
         <h3 class="users-section-title">{{ t('add_user') }}</h3>
         <form method="POST" action="{{ url_for('admin.add_user') }}" class="users-add-form">
@@ -42,15 +36,6 @@
                     <option value="admin">{{ t('role_admin') }}</option>
                 </select>
             </div>
-            <div class="form-group">
-                <label for="new-employee">{{ t('linked_employee') }} <span class="field-optional">({{ t('optional') }})</span></label>
-                <select id="new-employee" name="employee_code">
-                    <option value="">—</option>
-                    {% for e in employees %}
-                    <option value="{{ e.employee_code }}">{{ e.employee_name }} ({{ e.employee_code }})</option>
-                    {% endfor %}
-                </select>
-            </div>
             <div class="form-group users-add-actions">
                 <button type="submit" class="btn btn-primary">{{ t('add_user') }}</button>
             </div>
@@ -61,91 +46,83 @@
         <h3 class="users-section-title">{{ t('existing_users') }}</h3>
         <div class="user-perm-list">
             {% for u in users %}
-            <article class="user-perm-card {{ 'user-row-blocked' if not u.is_active else '' }}">
-                <header class="user-perm-header">
-                    <div>
-                        <strong class="user-perm-name">{{ u.username }}</strong>
-                        {% if u.username == 'admin' %}
-                        <span class="role-pill role-admin">{{ t('role_admin') }}</span>
-                        {% else %}
+            {% if u.username == 'admin' %}
+            <div class="user-summary-card user-summary-protected">
+                <div class="user-summary-main">
+                    <strong>{{ u.username }}</strong>
+                    <span class="role-pill role-admin">{{ t('role_admin') }}</span>
+                    <span class="badge badge-success">{{ t('active') }}</span>
+                </div>
+                <p class="muted-text">{{ t('role_admin_desc') }}</p>
+            </div>
+            {% else %}
+            <details class="user-perm-card {{ 'user-row-blocked' if not u.is_active else '' }}">
+                <summary class="user-perm-summary">
+                    <span class="user-summary-main">
+                        <strong>{{ u.username }}</strong>
                         <span class="role-pill role-{{ u.role or 'agent' }}">{{ t('role_' ~ (u.role or 'agent')) }}</span>
-                        {% endif %}
-                    </div>
-                    <div class="user-perm-status">
                         {% if u.is_active %}
                         <span class="badge badge-success">{{ t('active') }}</span>
                         {% else %}
                         <span class="badge badge-danger">{{ t('blocked') }}</span>
                         {% endif %}
-                    </div>
-                </header>
-
-                {% if u.username == 'admin' %}
-                <p class="muted-text user-admin-note">{{ t('role_admin_desc') }}</p>
-                {% else %}
+                    </span>
+                    <span class="user-summary-edit">{{ t('edit') }} ▾</span>
+                </summary>
                 <form method="POST" action="{{ url_for('admin.update_user_role', user_id=u.id) }}" class="user-perm-form" data-user-form>
-                    <div class="user-basic-row">
-                        <div class="form-group">
-                            <label>{{ t('role') }}</label>
-                            <select name="role" class="users-select user-role-select">
-                                <option value="agent" {{ 'selected' if u.role=='agent' else '' }}>{{ t('role_agent') }}</option>
-                                <option value="supervisor" {{ 'selected' if u.role=='supervisor' else '' }}>{{ t('role_supervisor') }}</option>
-                                <option value="admin" {{ 'selected' if u.role=='admin' else '' }}>{{ t('role_admin') }}</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>{{ t('linked_employee') }}</label>
-                            <select name="employee_code" class="users-select">
-                                <option value="">—</option>
-                                {% for e in employees %}
-                                <option value="{{ e.employee_code }}" {{ 'selected' if u.employee_code==e.employee_code else '' }}>{{ e.employee_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group user-apply-defaults">
-                            <label>&nbsp;</label>
-                            <button type="button" class="btn btn-sm btn-secondary btn-apply-role">{{ t('apply_role_defaults') }}</button>
-                        </div>
+                    <div class="user-role-bar">
+                        <label class="user-role-label">{{ t('role') }}</label>
+                        <select name="role" class="users-select user-role-select">
+                            <option value="agent" {{ 'selected' if u.role=='agent' else '' }}>{{ t('role_agent') }}</option>
+                            <option value="supervisor" {{ 'selected' if u.role=='supervisor' else '' }}>{{ t('role_supervisor') }}</option>
+                            <option value="admin" {{ 'selected' if u.role=='admin' else '' }}>{{ t('role_admin') }}</option>
+                        </select>
+                        <button type="button" class="btn btn-sm btn-secondary btn-apply-role">{{ t('apply_role_defaults') }}</button>
                     </div>
 
-                    <div class="user-perm-section">
-                        <h4 class="user-perm-section-title">{{ t('user_capabilities') }}</h4>
-                        <div class="perm-cap-grid">
-                            <label class="perm-check">
-                                <input type="checkbox" name="can_view_reports" {{ 'checked' if u.permissions and u.permissions.can_view_reports else '' }}>
-                                <span><strong>{{ t('perm_reports') }}</strong><small>{{ t('perm_reports_desc') }}</small></span>
-                            </label>
-                            <label class="perm-check">
-                                <input type="checkbox" name="can_export_excel" {{ 'checked' if u.permissions and u.permissions.can_export_excel else '' }}>
-                                <span><strong>{{ t('perm_excel') }}</strong><small>{{ t('perm_excel_desc') }}</small></span>
-                            </label>
-                            <label class="perm-check">
-                                <input type="checkbox" name="can_manage_users" {{ 'checked' if u.permissions and u.permissions.can_manage_users else '' }}>
-                                <span><strong>{{ t('perm_users') }}</strong><small>{{ t('perm_users_desc') }}</small></span>
-                            </label>
-                            <label class="perm-check">
-                                <input type="checkbox" name="can_edit_functions" {{ 'checked' if u.permissions and u.permissions.can_edit_functions else '' }}>
-                                <span><strong>{{ t('perm_functions') }}</strong><small>{{ t('perm_functions_desc') }}</small></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="user-perm-section">
-                        <h4 class="user-perm-section-title">{{ t('menu_access') }}</h4>
-                        <div class="perm-menu-groups">
-                            {% for group in menu_groups %}
-                            <div class="perm-menu-group">
-                                <div class="perm-group-title">{{ t(group['label_key']) }}</div>
-                                <div class="perm-check-grid">
-                                    {% for item in group['items'] %}
-                                    <label class="perm-check compact">
-                                        <input type="checkbox" name="func_{{ item['id'] }}" {{ 'checked' if access_map.get(u.id, {}).get(item['id']) else '' }}>
-                                        <span>{{ item['icon'] }} {{ item['label'] }}</span>
-                                    </label>
-                                    {% endfor %}
-                                </div>
+                    <div class="user-perm-grid">
+                        <div class="user-perm-block">
+                            <h4 class="user-perm-block-title">{{ t('user_capabilities') }}</h4>
+                            <div class="perm-toggle-row">
+                                <label class="perm-toggle" title="{{ t('perm_reports_desc') }}">
+                                    <input type="checkbox" name="can_view_reports" {{ 'checked' if u.permissions and u.permissions.can_view_reports else '' }}>
+                                    <span>{{ t('perm_reports') }}</span>
+                                </label>
+                                <label class="perm-toggle" title="{{ t('perm_excel_desc') }}">
+                                    <input type="checkbox" name="can_export_excel" {{ 'checked' if u.permissions and u.permissions.can_export_excel else '' }}>
+                                    <span>{{ t('perm_excel') }}</span>
+                                </label>
+                                <label class="perm-toggle" title="{{ t('perm_users_desc') }}">
+                                    <input type="checkbox" name="can_manage_users" {{ 'checked' if u.permissions and u.permissions.can_manage_users else '' }}>
+                                    <span>{{ t('perm_users') }}</span>
+                                </label>
+                                <label class="perm-toggle" title="{{ t('perm_functions_desc') }}">
+                                    <input type="checkbox" name="can_edit_functions" {{ 'checked' if u.permissions and u.permissions.can_edit_functions else '' }}>
+                                    <span>{{ t('perm_functions') }}</span>
+                                </label>
                             </div>
-                            {% endfor %}
+                        </div>
+
+                        <div class="user-perm-block user-perm-block-wide">
+                            <h4 class="user-perm-block-title">{{ t('perm_screens') }}</h4>
+                            <div class="perm-screens-grid">
+                                {% for group in menu_groups %}
+                                <div class="perm-screen-group" data-group="{{ group['key'] }}">
+                                    <div class="perm-screen-head">
+                                        <span>{{ t(group['label_key']) }}</span>
+                                        <button type="button" class="btn-link btn-select-group">{{ t('select_all_group') }}</button>
+                                    </div>
+                                    <div class="perm-screen-items">
+                                        {% for item in group['items'] %}
+                                        <label class="perm-screen-item">
+                                            <input type="checkbox" name="func_{{ item['id'] }}" {{ 'checked' if access_map.get(u.id, {}).get(item['id']) else '' }}>
+                                            <span>{{ item['label'] }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
 
@@ -155,11 +132,10 @@
                         <button type="submit" formaction="{{ url_for('admin.delete_user', user_id=u.id) }}" formmethod="post" class="btn btn-danger" onclick="return confirm('{{ t('confirm_delete') }}')">{{ t('delete') }}</button>
                     </div>
                 </form>
-                {% endif %}
-            </article>
+            </details>
+            {% endif %}
             {% endfor %}
         </div>
-        <p class="muted-text perm-hint">{{ t('apply_role_defaults_hint') }}</p>
     </section>
 </div>
 <script>
@@ -241,34 +217,6 @@ window.LOTUS_ROLE_PRESETS = {{ role_presets|tojson }};
         <input type="file" name="file" accept=".xlsx" required>
         <button type="submit" class="btn btn-primary">{{ t('upload_excel') }}</button>
     </form>
-</section>
-{% elif tab == 'access' %}
-<section class="admin-section form-card">
-    <h2>{{ t('feature_access') }}</h2>
-    <p class="subtitle">{{ t('permissions_legend') }}:
-        {{ t('perm_reports_desc') }} · {{ t('perm_users_desc') }} · {{ t('perm_excel_desc') }}</p>
-    <table class="data-table access-table">
-        <thead><tr><th>{{ t('username') }}</th><th>{{ t('features') }}</th><th>{{ t('visible') }}</th><th>{{ t('actions') }}</th></tr></thead>
-        <tbody>
-        {% for u in users %}
-        {% for f in functions if f.is_enabled and f.route_name not in ['knowledge.index', 'complaints.branch_dashboard'] %}
-        <tr>
-            <td>{{ u.username }}</td>
-            <td>{{ f.function_name if lang=='ar' else (f.function_name_en or f.function_name) }}</td>
-            <td>{{ t('visible') if access_map.get(u.id, {}).get(f.id) else t('hidden') }}</td>
-            <td>
-                <form method="POST" action="{{ url_for('admin.set_access') }}" class="inline-form">
-                    <input type="hidden" name="user_id" value="{{ u.id }}">
-                    <input type="hidden" name="function_id" value="{{ f.id }}">
-                    <input type="hidden" name="visible" value="{{ '0' if access_map.get(u.id, {}).get(f.id) else '1' }}">
-                    <button type="submit" class="btn btn-sm">{{ t('toggle') }}</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-        {% endfor %}
-        </tbody>
-    </table>
 </section>
 {% elif tab == 'settings' %}
 <section class="admin-section form-card">

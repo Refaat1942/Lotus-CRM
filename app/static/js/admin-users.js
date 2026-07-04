@@ -5,13 +5,12 @@
         var preset = presets[role];
         if (!preset || !form) return;
 
-        var permFields = [
+        [
             "can_view_reports",
             "can_export_excel",
             "can_manage_users",
             "can_edit_functions",
-        ];
-        permFields.forEach(function (name) {
+        ].forEach(function (name) {
             var input = form.querySelector('input[name="' + name + '"]');
             if (input) {
                 input.checked = Boolean(preset.permissions && preset.permissions[name]);
@@ -33,6 +32,20 @@
             var roleSelect = form && form.querySelector(".user-role-select");
             if (!roleSelect) return;
             applyRolePreset(form, roleSelect.value);
+        });
+    });
+
+    document.querySelectorAll(".btn-select-group").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var group = btn.closest(".perm-screen-group");
+            if (!group) return;
+            var inputs = group.querySelectorAll('.perm-screen-items input[type="checkbox"]');
+            var allChecked = Array.prototype.every.call(inputs, function (input) {
+                return input.checked;
+            });
+            inputs.forEach(function (input) {
+                input.checked = !allChecked;
+            });
         });
     });
 })();
