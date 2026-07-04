@@ -24,10 +24,10 @@
         <nav class="sidebar-nav">
             {% for group in nav_groups %}
             <div class="nav-group">
-                <div class="nav-group-title">{{ t(group.label_key) }}</div>
-                {% for item in group.items %}
-                <a href="{{ url_for(item.route_name) }}" class="sidebar-link{% if request.endpoint == item.route_name %} active{% endif %}">
-                    <span class="sidebar-icon">{{ item.icon }}</span>{{ item.label }}
+                <div class="nav-group-title">{{ t(group['label_key']) }}</div>
+                {% for item in group['items'] %}
+                <a href="{{ url_for(item['route_name']) }}" class="sidebar-link{% if request.endpoint == item['route_name'] %} active{% endif %}">
+                    <span class="sidebar-icon">{{ item['icon'] }}</span>{{ item['label'] }}
                 </a>
                 {% endfor %}
             </div>
