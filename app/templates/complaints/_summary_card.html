@@ -1,4 +1,4 @@
-{% macro summary_card(card) %}
+{% set card = summary_card %}
 <div class="summary-card-grid">
     <div class="summary-card-item summary-card-span">
         <span class="summary-card-label">{{ t('complaint_serial') }}</span>
@@ -68,4 +68,3 @@
         <span class="summary-card-value summary-card-text">{{ card.text_preview }}</span>
     </div>
 </div>
-{% endmacro %}
