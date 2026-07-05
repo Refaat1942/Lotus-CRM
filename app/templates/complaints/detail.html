@@ -15,7 +15,8 @@
 
 <section class="panel complaint-summary-panel">
     <h2 class="panel-title">📌 {{ t('complaint_summary') }}</h2>
-    <div class="complaint-summary-text">{{ summary }}</div>
+    {% from "complaints/_summary_card.html" import summary_card as render_summary_card %}
+    {{ render_summary_card(summary_card) }}
     {% if customer and customer.id %}
     <a href="{{ url_for('customers.profile', customer_id=customer.id) }}" class="btn btn-sm btn-secondary">{{ t('customer_card') }}</a>
     {% endif %}

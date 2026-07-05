@@ -1,0 +1,71 @@
+{% macro summary_card(card) %}
+<div class="summary-card-grid">
+    <div class="summary-card-item summary-card-span">
+        <span class="summary-card-label">{{ t('complaint_serial') }}</span>
+        <span class="summary-card-value serial-badge">{{ card.serial }}</span>
+        {% if card.escalated %}<span class="badge badge-escalated badge-lg">{{ t('escalated') }}</span>{% endif %}
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('complaint_id') }}</span>
+        <span class="summary-card-value">#{{ card.complaint_id }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('status') }}</span>
+        <span class="summary-card-value">{{ card.status_label }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('urgency') }}</span>
+        <span class="summary-card-value">{{ card.urgency_label }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('customer') }}</span>
+        <span class="summary-card-value">{{ card.customer_name }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('phone') }}</span>
+        <span class="summary-card-value">{{ card.phone }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('complaint_category') }}</span>
+        <span class="summary-card-value">{{ card.category }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('complaint_type') }}</span>
+        <span class="summary-card-value">{{ card.complaint_type }}</span>
+    </div>
+    {% if card.channel and card.channel != '—' %}
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('online_channel') }}</span>
+        <span class="summary-card-value">{{ card.channel }}</span>
+    </div>
+    {% endif %}
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('branch') }}</span>
+        <span class="summary-card-value">{{ card.branch }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('creator') }}</span>
+        <span class="summary-card-value">{{ card.creator }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('assigned_agent') }}</span>
+        <span class="summary-card-value">{{ card.assigned }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('date') }}</span>
+        <span class="summary-card-value">{{ card.date }} · {{ card.age }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('shift') }}</span>
+        <span class="summary-card-value">{{ card.shift_label }}</span>
+    </div>
+    <div class="summary-card-item">
+        <span class="summary-card-label">{{ t('follow_up') }}</span>
+        <span class="summary-card-value">{{ card.follow_up_label }}</span>
+    </div>
+    <div class="summary-card-item summary-card-span">
+        <span class="summary-card-label">{{ t('complaint_text') }}</span>
+        <span class="summary-card-value summary-card-text">{{ card.text_preview }}</span>
+    </div>
+</div>
+{% endmacro %}

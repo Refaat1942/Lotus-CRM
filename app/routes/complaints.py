@@ -28,7 +28,7 @@ from app.services.complaint_categories import (
     ONLINE_SOURCES,
     category_label_key,
 )
-from app.services.complaint_summary import build_complaint_summary
+from app.services.complaint_summary import build_complaint_summary, build_complaint_summary_card
 from app.services.customer_data import customer_public_dict, find_by_phone, full_name, read_customer
 from app.services.i18n import translate, translate_shift, translate_status, translate_urgency
 from app.services.urgency import URGENCIES, URGENCY_DEFAULT
@@ -304,8 +304,11 @@ def search_complaints():
                 "follow_up_label_key": f"follow_up_{fu}" if fu else None,
                 "follow_up_label": translate(f"follow_up_{fu}", lang) if fu else "",
                 "summary": build_complaint_summary(c, cust_data, lang),
+                "summary_card": build_complaint_summary_card(c, cust_data, lang, follow_up=fu),
             }
         )
+        card = result[-1]["summary_card"]
+        card["complaint_type"] = type_map.get(c.complaint_type, c.complaint_type)
     return jsonify(result)
 
 
@@ -445,6 +448,8 @@ def complaint_detail(complaint_id):
     type_display = ct.display_name(lang) if ct else complaint.complaint_type
     cat_label = translate(category_label_key(complaint.complaint_category or "delivery"), lang)
     summary = build_complaint_summary(complaint, customer_data, lang)
+    summary_card = build_complaint_summary_card(complaint, customer_data, lang)
+    summary_card["complaint_type"] = type_display
     if complaint.is_escalated:
         if complaint.escalation_recipients:
             escalation_emails = [e.strip() for e in complaint.escalation_recipients.split(",") if e.strip()]
@@ -465,6 +470,7 @@ def complaint_detail(complaint_id):
         customer=customer_data,
         category_label=cat_label,
         summary=summary,
+        summary_card=summary_card,
         escalation_emails=escalation_emails,
         escalation_recipients=escalation_recipients,
         timeline=timeline,

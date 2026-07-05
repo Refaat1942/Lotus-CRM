@@ -32,7 +32,7 @@
 
 <div id="summary-panel" class="panel complaint-summary-panel" hidden>
     <h2 class="panel-title">📌 {{ t('complaint_summary') }}</h2>
-    <div id="summary-text" class="complaint-summary-text"></div>
+    <div id="summary-body" class="complaint-summary-body"></div>
     <a id="summary-detail-link" href="#" class="btn btn-sm btn-primary">{{ t('details') }}</a>
 </div>
 
@@ -40,7 +40,7 @@
     <thead>
         <tr>
             <th>{{ t('complaint_serial') }}</th><th>{{ t('complaint_category') }}</th><th>{{ t('urgency') }}</th><th>{{ t('phone') }}</th><th>{{ t('customer') }}</th>
-            <th>{{ t('complaint_type') }}</th><th>{{ t('date') }}</th>            <th>{{ t('status') }}</th>
+            <th>{{ t('complaint_type') }}</th><th>{{ t('date') }}</th><th>{{ t('status') }}</th>
             <th>{{ t('follow_up') }}</th>
             <th>{{ t('branch') }}</th><th>{{ t('creator') }}</th><th>{{ t('assigned_agent') }}</th><th>{{ t('shift') }}</th><th>{{ t('actions') }}</th>
         </tr>
@@ -60,9 +60,62 @@ document.getElementById('to').value = today.toISOString().slice(0,10);
 
 let cachedRows = [];
 
+const SUMMARY_LABELS = {
+    serial: {{ t('complaint_serial')|tojson }},
+    complaint_id: {{ t('complaint_id')|tojson }},
+    status: {{ t('status')|tojson }},
+    urgency: {{ t('urgency')|tojson }},
+    customer: {{ t('customer')|tojson }},
+    phone: {{ t('phone')|tojson }},
+    category: {{ t('complaint_category')|tojson }},
+    type: {{ t('complaint_type')|tojson }},
+    channel: {{ t('online_channel')|tojson }},
+    branch: {{ t('branch')|tojson }},
+    creator: {{ t('creator')|tojson }},
+    assigned: {{ t('assigned_agent')|tojson }},
+    date: {{ t('date')|tojson }},
+    shift: {{ t('shift')|tojson }},
+    follow_up: {{ t('follow_up')|tojson }},
+    text: {{ t('complaint_text')|tojson }},
+    escalated: {{ t('escalated')|tojson }},
+};
+
+function renderSummaryCard(card) {
+    if (!card) return '';
+    const esc = card.escalated ? `<span class="badge badge-escalated badge-lg">${SUMMARY_LABELS.escalated}</span>` : '';
+    let html = `<div class="summary-card-grid">
+        <div class="summary-card-item summary-card-span">
+            <span class="summary-card-label">${SUMMARY_LABELS.serial}</span>
+            <span class="summary-card-value serial-badge">${card.serial}</span>${esc}
+        </div>`;
+    const items = [
+        ['complaint_id', '#' + card.complaint_id],
+        ['status', card.status_label],
+        ['urgency', card.urgency_label],
+        ['customer', card.customer_name],
+        ['phone', card.phone],
+        ['category', card.category],
+        ['type', card.complaint_type],
+        ['channel', card.channel !== '—' ? card.channel : null],
+        ['branch', card.branch],
+        ['creator', card.creator],
+        ['assigned', card.assigned],
+        ['date', card.date + ' · ' + card.age],
+        ['shift', card.shift_label],
+        ['follow_up', card.follow_up_label],
+    ];
+    items.forEach(([key, value]) => {
+        if (value == null || value === '') return;
+        html += `<div class="summary-card-item"><span class="summary-card-label">${SUMMARY_LABELS[key]}</span><span class="summary-card-value">${value}</span></div>`;
+    });
+    html += `<div class="summary-card-item summary-card-span"><span class="summary-card-label">${SUMMARY_LABELS.text}</span><span class="summary-card-value summary-card-text">${card.text_preview || '—'}</span></div>`;
+    html += '</div>';
+    return html;
+}
+
 function showSummary(row) {
     const panel = document.getElementById('summary-panel');
-    document.getElementById('summary-text').textContent = row.summary || '';
+    document.getElementById('summary-body').innerHTML = renderSummaryCard(row.summary_card) || (row.summary || '').replace(/\n/g, '<br>');
     document.getElementById('summary-detail-link').href = DETAIL_URL + '/' + row.id;
     panel.hidden = false;
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

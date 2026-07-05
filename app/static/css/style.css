@@ -714,6 +714,21 @@ body.lang-en .alert-panel { border-right: none; border-left: 4px solid var(--war
 /* Complaint summary & escalation */
 .complaint-summary-panel { margin-bottom: 1.25rem; border-inline-start: 4px solid var(--primary); }
 .complaint-summary-text { white-space: pre-line; line-height: 1.55; font-size: 0.92rem; background: #f8fafb; padding: 0.85rem 1rem; border-radius: 8px; margin-bottom: 0.75rem; }
+.complaint-summary-body { margin-bottom: 0.75rem; }
+.summary-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.65rem 1.25rem;
+    background: #f8fafb;
+    padding: 1rem 1.1rem;
+    border-radius: 10px;
+}
+.summary-card-item { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.summary-card-item.summary-card-span { grid-column: 1 / -1; }
+.summary-card-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: #607d8b; }
+.summary-card-value { font-size: 0.92rem; color: var(--text); word-break: break-word; }
+.summary-card-text { line-height: 1.5; white-space: pre-wrap; }
+.summary-card-item.summary-card-span .summary-card-value { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .badge-escalated { background: #c0392b; color: white; }
 .escalated-row { background: #fff5f5 !important; }
 .escalated-row:hover { background: #ffecec !important; }

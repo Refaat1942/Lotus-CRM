@@ -3,7 +3,7 @@ from datetime import datetime
 
 from app.services.complaint_categories import category_label_key
 from app.services.complaints import complaint_display_number
-from app.services.i18n import translate, translate_status, translate_urgency
+from app.services.i18n import translate, translate_shift, translate_status, translate_urgency
 from app.services.customer_data import full_name
 
 
@@ -23,29 +23,69 @@ def _text_preview(text, limit=220):
     return text[:limit].rstrip() + "…"
 
 
-def build_complaint_summary(complaint, customer_data=None, lang="ar"):
-    """Return a short multi-line briefing for agents opening a complaint."""
+def build_complaint_summary_card(complaint, customer_data=None, lang="ar", follow_up=None):
+    """Structured summary fields for list/detail cards."""
+    from app.services.complaints import follow_up_kind
+
     serial = complaint_display_number(complaint)
     status = translate_status(complaint.complaint_status, lang)
     urgency = translate_urgency(complaint.urgency or "متوسطة", lang)
     cat_key = complaint.complaint_category or "delivery"
     category = translate(category_label_key(cat_key), lang)
     branch = complaint.branch.branch_name if complaint.branch else (complaint.branch_code or "—")
-    assigned = complaint.assigned_to_name or ("غير مُسند" if lang == "ar" else "Unassigned")
+    assigned = complaint.assigned_to_name or translate("unassigned", lang)
     channel = complaint.channel_detail or complaint.online_channel or ""
-    customer_name = full_name(customer_data) if customer_data else ("—" if lang == "ar" else "Unknown")
-    phone = complaint.phone_number
+    customer_name = full_name(customer_data) if customer_data else "—"
+    phone = complaint.phone_number or "—"
     age = _age_label(complaint.complaint_date, lang)
     preview = _text_preview(complaint.complaint_text)
+    type_label = complaint.complaint_type or "—"
+    fu = follow_up if follow_up is not None else follow_up_kind(complaint)
 
-    type_part = complaint.complaint_type or "—"
-    channel_part = f" · {channel}" if channel else ""
+    return {
+        "serial": serial,
+        "complaint_id": complaint.complaint_id,
+        "status_label": status,
+        "urgency_label": urgency,
+        "customer_name": customer_name,
+        "phone": phone,
+        "category": category,
+        "complaint_type": type_label,
+        "channel": channel or "—",
+        "branch": branch,
+        "creator": complaint.created_by_name or "—",
+        "assigned": assigned,
+        "date": complaint.complaint_date.strftime("%Y-%m-%d %H:%M"),
+        "shift_label": translate_shift(complaint.shift, lang) if complaint.shift else "—",
+        "age": age,
+        "follow_up_label": translate(f"follow_up_{fu}", lang) if fu else "—",
+        "escalated": bool(getattr(complaint, "is_escalated", False)),
+        "text_preview": preview,
+    }
+
+
+def build_complaint_summary(complaint, customer_data=None, lang="ar"):
+    """Return a short multi-line briefing for agents opening a complaint."""
+    card = build_complaint_summary_card(complaint, customer_data, lang)
+    serial = card["serial"]
+    status = card["status_label"]
+    urgency = card["urgency_label"]
+    category = card["category"]
+    branch = card["branch"]
+    assigned = card["assigned"]
+    channel = card["channel"]
+    customer_name = card["customer_name"]
+    phone = card["phone"]
+    age = card["age"]
+    preview = card["text_preview"]
+    type_part = card["complaint_type"]
+    channel_part = f" · {channel}" if channel and channel != "—" else ""
 
     if lang == "ar":
         lines = [
             f"📋 {serial} — {status} — أولوية {urgency}",
         ]
-        if getattr(complaint, "is_escalated", False):
+        if card["escalated"]:
             lines.append("⚠️ مُصعّدة للإدارة العليا — تتطلب متابعة فورية")
         lines.extend(
             [
@@ -59,7 +99,7 @@ def build_complaint_summary(complaint, customer_data=None, lang="ar"):
         lines = [
             f"📋 {serial} — {status} — {urgency} priority",
         ]
-        if getattr(complaint, "is_escalated", False):
+        if card["escalated"]:
             lines.append("⚠️ Escalated to upper management — needs immediate attention")
         lines.extend(
             [
