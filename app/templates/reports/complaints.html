@@ -17,6 +17,12 @@
         <option value="الكل">{{ t('all') }}</option>
         {% for u in urgencies %}<option value="{{ u }}" {{ 'selected' if request.args.get('urgency')==u else '' }}>{{ t_urgency(u) }}</option>{% endfor %}
     </select>
+    <select name="category">
+        <option value="الكل">{{ t('all') }}</option>
+        {% for key, label_key in categories %}
+        <option value="{{ key }}" {{ 'selected' if request.args.get('category')==key else '' }}>{{ t(label_key) }}</option>
+        {% endfor %}
+    </select>
     <input type="text" name="agent" value="{{ request.args.get('agent','') }}" placeholder="{{ t('assigned_agent') }}">
     <button type="submit" class="btn btn-primary">{{ t('search') }}</button>
     <a href="?{{ request.query_string.decode() }}&export=excel" class="btn btn-secondary">{{ t('export_excel') }}</a>

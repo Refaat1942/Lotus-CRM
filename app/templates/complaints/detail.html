@@ -7,22 +7,41 @@
         <h1 class="serial-heading">{{ t_serial(complaint) }}</h1>
         <p class="subtitle">{{ t('complaint_history') }} & {{ t('update_status') }}</p>
     </div>
-    <span class="badge badge-lg">{{ t_status(complaint.complaint_status) }}</span>
+    <div class="header-badges">
+        {% if complaint.is_escalated %}<span class="badge badge-escalated badge-lg">{{ t('escalated') }}</span>{% endif %}
+        <span class="badge badge-lg">{{ t_status(complaint.complaint_status) }}</span>
+    </div>
 </div>
+
+<section class="panel complaint-summary-panel">
+    <h2 class="panel-title">📌 {{ t('complaint_summary') }}</h2>
+    <div class="complaint-summary-text">{{ summary }}</div>
+    {% if customer and customer.id %}
+    <a href="{{ url_for('customers.profile', customer_id=customer.id) }}" class="btn btn-sm btn-secondary">{{ t('customer_card') }}</a>
+    {% endif %}
+</section>
 
 <div class="layout-two-col">
     <section class="panel">
         <h2 class="panel-title">{{ t('details') }}</h2>
         <dl class="info-list">
             <dt>{{ t('phone') }}</dt><dd>{{ complaint.phone_number }}</dd>
-            <dt>{{ t('customer') }}</dt><dd>{% if customer %}{{ customer.first_name }} {{ customer.last_name }}{% else %}—{% endif %}</dd>
+            <dt>{{ t('customer') }}</dt><dd>{% if customer and customer.id %}<a href="{{ url_for('customers.profile', customer_id=customer.id) }}">{{ customer.first_name }} {{ customer.last_name }}</a>{% elif customer %}{{ customer.first_name }} {{ customer.last_name }}{% else %}—{% endif %}</dd>
             <dt>{{ t('branch') }}</dt><dd>{{ complaint.branch.branch_name if complaint.branch else complaint.branch_code }}</dd>
+            <dt>{{ t('complaint_category') }}</dt><dd>{{ category_label }}</dd>
             <dt>{{ t('complaint_type') }}</dt><dd>{{ type_display }}</dd>
+            {% if complaint.channel_detail or complaint.online_channel %}
+            <dt>{{ t('online_channel') }}</dt><dd>{{ complaint.channel_detail or complaint.online_channel }}</dd>
+            {% endif %}
             <dt>{{ t('urgency') }}</dt><dd><span class="urgency-badge urgency-{{ complaint.urgency or 'متوسطة' }}">{{ t_urgency(complaint.urgency or 'متوسطة') }}</span></dd>
             <dt>{{ t('creator') }}</dt><dd>{{ complaint.created_by_name }}</dd>
             <dt>{{ t('assigned_agent') }}</dt><dd>{{ complaint.assigned_to_name or t('unassigned') }}</dd>
             <dt>{{ t('shift') }}</dt><dd>{{ t_shift(complaint.shift) }}</dd>
             <dt>{{ t('date') }}</dt><dd>{{ complaint.complaint_date.strftime('%Y-%m-%d %H:%M') }}</dd>
+            {% if complaint.is_escalated %}
+            <dt>{{ t('escalated') }}</dt>
+            <dd>{{ complaint.escalated_by or '—' }} · {{ complaint.escalated_at.strftime('%Y-%m-%d %H:%M') if complaint.escalated_at else '' }}{% if complaint.escalation_reason %}<br><em>{{ complaint.escalation_reason }}</em>{% endif %}</dd>
+            {% endif %}
         </dl>
         <h3 class="panel-sub">{{ t('complaint_text') }}</h3>
         <div class="text-box">{{ complaint.complaint_text }}</div>
@@ -60,6 +79,14 @@
             </select>
             <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
         </form>
+        {% if not complaint.is_escalated %}
+        <h2 class="panel-title">{{ t('escalate_complaint') }}</h2>
+        <form method="POST" class="stack-form escalation-form">
+            <input type="hidden" name="action" value="escalate">
+            <textarea name="escalation_reason" rows="3" placeholder="{{ t('escalation_reason_placeholder') }}"></textarea>
+            <button type="submit" class="btn btn-warning" onclick="return confirm('{{ t('escalate_confirm') }}')">⬆ {{ t('escalate_to_management') }}</button>
+        </form>
+        {% endif %}
         <h2 class="panel-title">{{ t('add_note') }}</h2>
         <form method="POST" class="stack-form">
             <input type="hidden" name="action" value="note">

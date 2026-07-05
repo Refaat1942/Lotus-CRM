@@ -7,14 +7,23 @@ from app.decorators import feature_required
 from app.extensions import db
 from app.models import Branch, Complaint, ComplaintDetail, ComplaintType, Customer, Employee
 from app.services.audit import log_action
-from app.services.email import send_complaint_notification
+from app.services.email import send_complaint_notification, send_escalation_notification
 from app.services.complaints import (
     build_dashboard_overview,
     complaint_display_number,
     generate_complaint_serial,
     my_complaints_filter,
 )
-from app.services.i18n import translate_shift, translate_status, translate_urgency
+from app.services.complaint_categories import (
+    CATEGORIES,
+    CATEGORY_KEYS,
+    DIGITAL_PLATFORMS,
+    ONLINE_SOURCES,
+    category_label_key,
+)
+from app.services.complaint_summary import build_complaint_summary
+from app.services.customer_data import customer_public_dict, find_by_phone, full_name, read_customer
+from app.services.i18n import translate, translate_shift, translate_status, translate_urgency
 from app.services.urgency import URGENCIES, URGENCY_DEFAULT
 
 complaints_bp = Blueprint("complaints", __name__)
@@ -27,9 +36,19 @@ def _active_types():
     return ComplaintType.query.filter_by(is_active=True).order_by(ComplaintType.sort_order).all()
 
 
-def _type_requires_online(name_ar):
-    ct = ComplaintType.query.filter_by(name_ar=name_ar).first()
-    return ct.requires_online if ct else name_ar == "مشكلة اون لاين"
+def _types_by_category(lang="ar"):
+    grouped = {key: [] for key, _ in CATEGORIES}
+    for ct in _active_types():
+        cat = ct.category or "delivery"
+        if cat not in grouped:
+            grouped[cat] = []
+        grouped[cat].append(
+            {
+                "value": ct.name_ar,
+                "label": ct.display_name(lang),
+            }
+        )
+    return grouped
 
 
 def _shift(now=None):
@@ -96,9 +115,17 @@ def new_complaint():
             emp = _agent_employee()
             branch_code = emp.branch_code if emp else None
         phone = request.form.get("phone", "").strip()
+        category = request.form.get("complaint_category", "delivery")
+        if category not in CATEGORY_KEYS:
+            category = "delivery"
         ctype = request.form.get("complaint_type")
         text = request.form.get("complaint_text", "").strip()
-        channel = request.form.get("online_channel") if _type_requires_online(ctype) else None
+        channel_detail = request.form.get("channel_detail") or None
+        online_channel = None
+        if category == "digital" and channel_detail in DIGITAL_PLATFORMS:
+            online_channel = channel_detail
+        elif category == "online" and channel_detail in ONLINE_SOURCES:
+            online_channel = channel_detail
         urgency = request.form.get("urgency", URGENCY_DEFAULT)
         if urgency not in URGENCIES:
             urgency = URGENCY_DEFAULT
@@ -111,12 +138,14 @@ def new_complaint():
         if emp:
             agent_name = emp.employee_name
         now = datetime.now()
-        serial = generate_complaint_serial(now)
+        serial = generate_complaint_serial(branch_code, now)
         complaint = Complaint(
             phone_number=phone,
             serial_number=serial,
             complaint_type=ctype,
-            online_channel=channel,
+            complaint_category=category,
+            online_channel=online_channel,
+            channel_detail=channel_detail,
             complaint_text=text,
             complaint_date=now,
             complaint_status="مفتوحة",
@@ -141,7 +170,7 @@ def new_complaint():
         try:
             body = (
                 f"Serial  : {serial}\nAgent   : {agent_name}\nPhone   : {phone}\nType    : {ctype}\n"
-                f"Urgency : {urgency}\nBranch  : {branch_code}\nShift   : {complaint.shift}\n\nText:\n{text}"
+                f"Urgency : {urgency}\nCategory: {category}\nChannel : {channel_detail or '—'}\nBranch  : {branch_code}\nShift   : {complaint.shift}\n\nText:\n{text}"
             )
             send_complaint_notification(branch_code, body)
         except Exception:
@@ -151,11 +180,15 @@ def new_complaint():
         flash(f"serial:{serial}", "success")
         return redirect(url_for("complaints.complaint_detail", complaint_id=complaint.complaint_id))
 
+    lang = session.get("lang", "ar")
     return render_template(
         "complaints/new.html",
         branches=branches,
         complaint_types=types,
-        online_channels=ONLINE_CHANNELS,
+        categories=CATEGORIES,
+        types_by_category=_types_by_category(lang),
+        digital_platforms=DIGITAL_PLATFORMS,
+        online_sources=ONLINE_SOURCES,
         prefill_phone=prefill_phone,
         default_branch=agent.branch_code if agent else None,
         urgencies=URGENCIES,
@@ -166,21 +199,10 @@ def new_complaint():
 @login_required
 @feature_required("complaints.new_complaint")
 def lookup_customer(phone):
-    cust = Customer.query.filter_by(phone_number=phone).first()
+    cust = find_by_phone(phone)
     if not cust:
         return jsonify({"found": False})
-    name = f"{cust.first_name or ''} {cust.last_name or ''}".strip()
-    return jsonify(
-        {
-            "found": True,
-            "name": name,
-            "first_name": cust.first_name or "",
-            "last_name": cust.last_name or "",
-            "phone": cust.phone_number,
-            "city": cust.city or "",
-            "region": cust.region or "",
-        }
-    )
+    return jsonify(customer_public_dict(cust))
 
 
 @complaints_bp.route("/list", methods=["GET"])
@@ -210,6 +232,7 @@ def search_complaints():
     assigned = request.args.get("assigned", "الكل")
     shift = request.args.get("shift", "الكل")
     branch = request.args.get("branch", "الكل")
+    escalated = request.args.get("escalated", "")
 
     q = Complaint.query
     if date_from:
@@ -235,21 +258,27 @@ def search_complaints():
         q = q.filter(Complaint.shift == shift)
     if branch and branch != "الكل":
         q = q.filter(Complaint.branch_code == branch)
+    if escalated == "1":
+        q = q.filter(Complaint.is_escalated.is_(True))
 
     rows = q.order_by(Complaint.complaint_date.desc()).limit(500).all()
     type_map = {t.name_ar: t.display_name(lang) for t in ComplaintType.query.all()}
     result = []
     now = datetime.now()
     for c in rows:
-        cust = Customer.query.filter_by(phone_number=c.phone_number).first()
-        cust_name = f"{cust.first_name or ''} {cust.last_name or ''}".strip() if cust else ""
+        cust = find_by_phone(c.phone_number)
+        cust_data = read_customer(cust) if cust else None
+        cust_name = full_name(cust_data) if cust_data else ""
         alert = c.complaint_status == "مفتوحة" and (now - c.complaint_date).days >= 1
+        cat_key = c.complaint_category or "delivery"
         result.append(
             {
                 "id": c.complaint_id,
                 "serial": complaint_display_number(c),
                 "phone": c.phone_number,
                 "customer": cust_name,
+                "category": translate(category_label_key(cat_key), lang),
+                "channel": c.channel_detail or c.online_channel or "",
                 "type_label": type_map.get(c.complaint_type, c.complaint_type),
                 "date": c.complaint_date.strftime("%Y-%m-%d %H:%M"),
                 "status_label": translate_status(c.complaint_status, lang),
@@ -260,6 +289,8 @@ def search_complaints():
                 "urgency_label": translate_urgency(c.urgency or "متوسطة", lang),
                 "shift_label": translate_shift(c.shift, lang),
                 "alert": alert,
+                "escalated": bool(c.is_escalated),
+                "summary": build_complaint_summary(c, cust_data, lang),
             }
         )
     return jsonify(result)
@@ -344,13 +375,40 @@ def complaint_detail(complaint_id):
                     "status",
                 )
                 log_action("complaint.urgency", "complaint", complaint_id, f"{old_u} → {new_u}")
+        elif action == "escalate" and not complaint.is_escalated:
+            reason = request.form.get("escalation_reason", "").strip()
+            complaint.is_escalated = True
+            complaint.escalated_at = datetime.utcnow()
+            complaint.escalated_by = modifier
+            complaint.escalation_reason = reason or None
+            complaint.last_modified = datetime.utcnow()
+            serial = complaint_display_number(complaint)
+            _add_timeline(
+                complaint_id,
+                modifier,
+                f"Escalated to upper management" + (f": {reason}" if reason else ""),
+                "escalate",
+            )
+            log_action("complaint.escalate", "complaint", complaint_id, reason[:200] if reason else "")
+            try:
+                esc_cust = find_by_phone(complaint.phone_number)
+                esc_data = read_customer(esc_cust) if esc_cust else None
+                body = build_complaint_summary(complaint, esc_data, lang)
+                if reason:
+                    body += f"\n\nEscalation reason:\n{reason}"
+                send_escalation_notification(complaint.branch_code, serial, body)
+            except Exception:
+                flash("email_failed", "warning")
         db.session.commit()
         flash("updated", "success")
         return redirect(url_for("complaints.complaint_detail", complaint_id=complaint_id))
 
-    cust = Customer.query.filter_by(phone_number=complaint.phone_number).first()
+    cust = find_by_phone(complaint.phone_number)
+    customer_data = read_customer(cust) if cust else None
     ct = ComplaintType.query.filter_by(name_ar=complaint.complaint_type).first()
     type_display = ct.display_name(lang) if ct else complaint.complaint_type
+    cat_label = translate(category_label_key(complaint.complaint_category or "delivery"), lang)
+    summary = build_complaint_summary(complaint, customer_data, lang)
     timeline = (
         ComplaintDetail.query.filter_by(complaint_id=complaint_id)
         .order_by(ComplaintDetail.detail_date.desc())
@@ -359,7 +417,9 @@ def complaint_detail(complaint_id):
     return render_template(
         "complaints/detail.html",
         complaint=complaint,
-        customer=cust,
+        customer=customer_data,
+        category_label=cat_label,
+        summary=summary,
         timeline=timeline,
         type_display=type_display,
         statuses=STATUSES,

@@ -156,28 +156,46 @@ window.LOTUS_ROLE_PRESETS = {{ role_presets|tojson }};
 {% elif tab == 'types' %}
 <section class="panel">
     <h2 class="panel-title">{{ t('complaint_types') }}</h2>
-    <form method="POST" action="{{ url_for('admin.add_complaint_type') }}" class="inline-form">
-        <input name="name_ar" placeholder="{{ t('arabic') }}" required>
-        <input name="name_en" placeholder="{{ t('english') }}">
-        <label><input type="checkbox" name="requires_online"> {{ t('requires_online') }}</label>
-        <button type="submit" class="btn btn-primary">{{ t('add_new') }}</button>
+    <form method="POST" action="{{ url_for('admin.add_complaint_type') }}" class="type-add-form panel">
+        <div class="form-grid type-add-grid">
+            <input name="name_ar" placeholder="{{ t('arabic') }}" required>
+            <input name="name_en" placeholder="{{ t('english') }}">
+            <select name="category">
+                {% for key, label_key in categories %}
+                <option value="{{ key }}">{{ t(label_key) }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">{{ t('add_new') }}</button>
+        </div>
     </form>
-    <table class="data-table">
-        <thead><tr><th>AR</th><th>EN</th><th>{{ t('online_channel') }}</th><th>{{ t('status') }}</th><th></th></tr></thead>
-        <tbody>
-        {% for ct in complaint_types %}
-        <tr>
-            <form method="POST" action="{{ url_for('admin.edit_complaint_type', type_id=ct.id) }}">
-            <td><input name="name_ar" value="{{ ct.name_ar }}" style="width:100%"></td>
-            <td><input name="name_en" value="{{ ct.name_en or '' }}" style="width:100%"></td>
-            <td><input type="checkbox" name="requires_online" {{ 'checked' if ct.requires_online else '' }}></td>
-            <td><input type="checkbox" name="is_active" {{ 'checked' if ct.is_active else '' }}> {{ t('enabled') }}</td>
-            <td><button class="btn btn-sm btn-primary">{{ t('save') }}</button></td>
-            </form>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+
+    {% for key, label_key in categories %}
+    <div class="type-category-block">
+        <h3 class="type-category-title">{{ t(label_key) }}</h3>
+        <table class="data-table type-table">
+            <thead><tr><th>{{ t('arabic') }}</th><th>{{ t('english') }}</th><th>{{ t('status') }}</th><th></th></tr></thead>
+            <tbody>
+            {% for ct in complaint_types if ct.category == key or (not ct.category and key == 'delivery') %}
+            <tr>
+                <form method="POST" action="{{ url_for('admin.edit_complaint_type', type_id=ct.id) }}">
+                <td><input name="name_ar" value="{{ ct.name_ar }}" class="type-input"></td>
+                <td><input name="name_en" value="{{ ct.name_en or '' }}" class="type-input"></td>
+                <td>
+                    <select name="category" class="type-select">
+                        {% for ckey, clabel in categories %}
+                        <option value="{{ ckey }}" {{ 'selected' if (ct.category or 'delivery')==ckey else '' }}>{{ t(clabel) }}</option>
+                        {% endfor %}
+                    </select>
+                    <label class="type-check"><input type="checkbox" name="is_active" {{ 'checked' if ct.is_active else '' }}> {{ t('enabled') }}</label>
+                </td>
+                <td><button class="btn btn-sm btn-primary">{{ t('save') }}</button></td>
+                </form>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
 </section>
 {% elif tab == 'sla' %}
 <section class="panel">
@@ -254,6 +272,44 @@ window.LOTUS_ROLE_PRESETS = {{ role_presets|tojson }};
 </section>
 {% elif tab == 'import' %}
 <section class="admin-section form-card">
+    <h2>{{ t('import_customers') }}</h2>
+    <p class="subtitle">{{ t('import_customers_hint') }} 🔒 {{ t('customer_encrypted_note') }}</p>
+    <form method="POST" action="{{ url_for('admin.import_customers_preview') }}" enctype="multipart/form-data" class="inline-form">
+        <input type="file" name="file" accept=".xlsx,.xls" required>
+        <button type="submit" class="btn btn-primary">{{ t('upload_excel') }}</button>
+    </form>
+
+    {% if import_headers and import_mapping is not none %}
+    <div class="import-map-panel panel">
+        <h3>{{ t('map_columns') }}</h3>
+        <form method="POST" action="{{ url_for('admin.import_customers_confirm') }}">
+            <div class="import-map-grid">
+                {% for field, label in [('phone_number', 'phone'), ('first_name', 'first_name'), ('last_name', 'last_name'), ('full_name', 'name'), ('city', 'city'), ('region', 'region')] %}
+                <label>{{ t(label) }}
+                    <select name="map_{{ field }}">
+                        <option value="">—</option>
+                        {% for idx in range(import_headers|length) %}
+                        <option value="{{ idx }}" {{ 'selected' if import_mapping.get(field) == idx else '' }}>{{ import_headers[idx] }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                {% endfor %}
+            </div>
+            {% if import_preview %}
+            <table class="data-table compact-table">
+                <thead><tr>{% for h in import_headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+                <tbody>
+                {% for row in import_preview %}
+                <tr>{% for cell in row %}<td>{{ cell or '' }}</td>{% endfor %}</tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+            <button type="submit" class="btn btn-primary">{{ t('import_confirm') }}</button>
+        </form>
+    </div>
+    {% endif %}
+    <hr>
     <h2>{{ t('import_branches') }}</h2>
     <a href="{{ url_for('admin.template_branches') }}" class="btn btn-secondary">{{ t('download_template') }}</a>
     <form method="POST" action="{{ url_for('admin.import_branches') }}" enctype="multipart/form-data" class="inline-form">

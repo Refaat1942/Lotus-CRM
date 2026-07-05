@@ -9,8 +9,10 @@ from sqlalchemy import func
 from app.decorators import feature_required, permission_required
 from app.extensions import db
 from app.models import AuditLog, Branch, Complaint, Customer, User
+from app.services.complaint_categories import CATEGORIES, category_label_key
 from app.services.complaints import complaint_display_number
-from app.services.i18n import translate_status, translate_urgency
+from app.services.customer_data import mask_phone, read_customer
+from app.services.i18n import translate, translate_status, translate_urgency
 
 reports_bp = Blueprint("reports", __name__)
 
@@ -57,12 +59,15 @@ def _complaint_filters():
     status = request.args.get("status", "الكل")
     urgency = request.args.get("urgency", "الكل")
     agent = request.args.get("agent", "").strip()
+    category = request.args.get("category", "الكل")
     if branch and branch not in ("الكل", "all", ""):
         clauses.append(Complaint.branch_code == branch)
     if status and status not in ("الكل", "all", ""):
         clauses.append(Complaint.complaint_status == status)
     if urgency and urgency not in ("الكل", "all", ""):
         clauses.append(Complaint.urgency == urgency)
+    if category and category not in ("الكل", "all", ""):
+        clauses.append(Complaint.complaint_category == category)
     if agent:
         clauses.append(Complaint.assigned_to_name.contains(agent))
     return clauses
@@ -88,6 +93,7 @@ def _report_context(extra=None):
         "branches": Branch.query.order_by(Branch.branch_name).all(),
         "statuses": STATUSES,
         "urgencies": URGENCIES,
+        "categories": CATEGORIES,
     }
     if extra:
         ctx.update(extra)
@@ -112,8 +118,10 @@ def complaints_report():
     data = [
         {
             "Serial": complaint_display_number(c),
-            "Phone": c.phone_number,
+            "Phone": mask_phone(c.phone_number),
+            "Category": translate(category_label_key(c.complaint_category or "delivery"), lang),
             "Type": c.complaint_type,
+            "Channel": c.channel_detail or c.online_channel or "",
             "Status": translate_status(c.complaint_status, lang),
             "Urgency": translate_urgency(c.urgency or "متوسطة", lang),
             "Agent": c.assigned_to_name or c.created_by_name or "",
@@ -252,25 +260,37 @@ def summary_report():
 @feature_required("reports.index")
 @permission_required("can_view_reports")
 def customers_report():
+    if request.args.get("export") == "excel":
+        flash("customer_export_blocked", "error")
+        return redirect(url_for("reports.customers_report", **request.args))
+
     phone = request.args.get("phone", "").strip()
     city = request.args.get("city", "").strip()
-    q = Customer.query
+    from app.services.customer_data import find_by_phone, search_customers
+
+    rows = []
     if phone:
-        q = q.filter(Customer.phone_number.contains(phone))
-    if city:
-        q = q.filter(Customer.city.contains(city))
-    rows = q.order_by(Customer.id).all()
-    data = [
-        {
-            "First Name": r.first_name,
-            "Last Name": r.last_name,
-            "Phone": r.phone_number,
-            "City": r.city,
-            "Region": r.region,
-        }
-        for r in rows
-    ]
-    resp = _export_if_requested(data, "customers")
-    if resp:
-        return resp
-    return render_template("reports/customers.html", rows=data, **_report_context())
+        exact = find_by_phone(phone)
+        if exact:
+            rows = [exact]
+        else:
+            return render_template(
+                "reports/customers.html",
+                rows=search_customers(phone, limit=50),
+                masked=True,
+                **_report_context(),
+            )
+    else:
+        for r in Customer.query.limit(500).all():
+            d = read_customer(r)
+            if city and city.lower() not in (d.get("city") or "").lower():
+                continue
+            rows.append(
+                {
+                    "name": f"{d.get('first_name', '')} {d.get('last_name', '')}".strip(),
+                    "phone": mask_phone(d.get("phone_number")),
+                    "city": d.get("city") or "",
+                    "region": d.get("region") or "",
+                }
+            )
+    return render_template("reports/customers.html", rows=rows, masked=True, **_report_context())

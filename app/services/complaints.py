@@ -16,17 +16,19 @@ def complaint_display_number(complaint):
     return f"#{complaint.complaint_id}"
 
 
-def generate_complaint_serial(when=None):
-    """Daily serial: CMP-YYYYMMDD-0001, CMP-YYYYMMDD-0002, …"""
+def generate_complaint_serial(branch_code, when=None):
+    """Daily per-branch serial: {BRANCH}-YYYYMMDD-0001, {BRANCH}-YYYYMMDD-0002, …"""
     when = when or datetime.now()
+    branch_code = (branch_code or "GEN").strip().upper().replace(" ", "")[:15]
     date_str = when.strftime("%Y%m%d")
-    prefix = f"{SERIAL_PREFIX}-{date_str}-"
+    prefix = f"{branch_code}-{date_str}-"
     day_start = when.replace(hour=0, minute=0, second=0, microsecond=0)
     day_end = when.replace(hour=23, minute=59, second=59, microsecond=999999)
 
     for _ in range(10):
         last = (
             Complaint.query.filter(
+                Complaint.branch_code == branch_code,
                 Complaint.complaint_date >= day_start,
                 Complaint.complaint_date <= day_end,
                 Complaint.serial_number.like(f"{prefix}%"),

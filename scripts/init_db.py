@@ -128,13 +128,18 @@ SAMPLE_EMPLOYEES = [
 ]
 
 DEFAULT_COMPLAINT_TYPES = [
-    ("تأخير", "Delay", False),
-    ("منتج خاطئ", "Wrong Product", False),
-    ("معاملة سيئة", "Bad Service", False),
-    ("أخرى", "Other", False),
-    ("نقص ادويه", "Medicine Shortage", False),
-    ("بديل غير مناسب", "Bad Substitute", False),
-    ("مشكلة اون لاين", "Online Issue", True),
+    ("مشكلة دفع", "Payment Issue", "cash", False),
+    ("استرداد", "Refund", "cash", False),
+    ("تغطية تأمين", "Coverage Issue", "insurance", False),
+    ("موافقة تأمين", "Authorization Delay", "insurance", False),
+    ("تأخير", "Delay", "delivery", False),
+    ("منتج خاطئ", "Wrong Product", "delivery", False),
+    ("نقص ادويه", "Medicine Shortage", "delivery", False),
+    ("بديل غير مناسب", "Bad Substitute", "delivery", False),
+    ("معاملة سيئة", "Bad Service", "delivery", False),
+    ("مشكلة رقمية", "Digital Issue", "digital", False),
+    ("مشكلة اون لاين", "Online Issue", "online", False),
+    ("أخرى", "Other", "delivery", False),
 ]
 
 
@@ -247,9 +252,16 @@ def init_db():
                 )
 
         if ComplaintType.query.count() == 0:
-            for i, (ar, en, online) in enumerate(DEFAULT_COMPLAINT_TYPES):
+            for i, (ar, en, cat, online) in enumerate(DEFAULT_COMPLAINT_TYPES):
                 db.session.add(
-                    ComplaintType(name_ar=ar, name_en=en, requires_online=online, sort_order=i, is_active=True)
+                    ComplaintType(
+                        name_ar=ar,
+                        name_en=en,
+                        category=cat,
+                        requires_online=online,
+                        sort_order=i,
+                        is_active=True,
+                    )
                 )
 
         defaults = {

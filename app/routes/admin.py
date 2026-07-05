@@ -20,7 +20,9 @@ from werkzeug.utils import secure_filename
 
 from app.decorators import feature_required, permission_required
 from app.extensions import db
-from app.models import AppSetting, AuditLog, Branch, ComplaintType, Employee, SystemFunction, User, UserFunctionAccess, UserPermission
+from app.models import AppSetting, AuditLog, Branch, ComplaintType, Customer, Employee, SystemFunction, User, UserFunctionAccess, UserPermission
+from app.services.complaint_categories import CATEGORIES
+from app.services.customer_data import detect_column_mapping, import_rows
 from app.services.access import (
     ROLE_ADMIN,
     ROLE_AGENT,
@@ -94,6 +96,10 @@ def index():
         roles=[ROLE_AGENT, ROLE_SUPERVISOR, ROLE_ADMIN],
         sla_matrix=build_sla_matrix(complaint_types),
         urgencies=URGENCIES,
+        categories=CATEGORIES,
+        import_headers=session.get("import_headers"),
+        import_mapping=session.get("import_mapping"),
+        import_preview=session.get("import_preview"),
     )
 
 
@@ -385,6 +391,53 @@ def import_employees():
     return redirect(url_for("admin.index", tab="import"))
 
 
+@admin_bp.route("/import/customers/preview", methods=["POST"])
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def import_customers_preview():
+    file = request.files.get("file")
+    if not file or not file.filename:
+        flash("required_fields", "error")
+        return redirect(url_for("admin.index", tab="import"))
+    wb = load_workbook(file, read_only=True)
+    ws = wb.active
+    rows = [list(r) for r in ws.iter_rows(values_only=True) if any(r)]
+    if len(rows) < 2:
+        flash("required_fields", "error")
+        return redirect(url_for("admin.index", tab="import"))
+    headers = [str(h or "") for h in rows[0]]
+    mapping = detect_column_mapping(headers)
+    session["import_rows"] = rows[1:501]
+    session["import_headers"] = headers
+    session["import_mapping"] = mapping
+    session["import_preview"] = rows[1:6]
+    flash("import_preview_ready", "success")
+    return redirect(url_for("admin.index", tab="import", step="customers"))
+
+
+@admin_bp.route("/import/customers/confirm", methods=["POST"])
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def import_customers_confirm():
+    rows = session.pop("import_rows", None)
+    session.pop("import_headers", None)
+    session.pop("import_preview", None)
+    if not rows:
+        flash("required_fields", "error")
+        return redirect(url_for("admin.index", tab="import"))
+    mapping = {}
+    for field in ("phone_number", "first_name", "last_name", "full_name", "city", "region"):
+        raw = request.form.get(f"map_{field}", "")
+        if raw != "":
+            mapping[field] = int(raw)
+    added, updated, skipped = import_rows(rows, mapping)
+    log_action("admin.import.customers", "customer", details=f"added={added} updated={updated}")
+    flash("import_success", "success")
+    return redirect(url_for("admin.index", tab="import"))
+
+
 @admin_bp.route("/types/add", methods=["POST"])
 @login_required
 @feature_required("admin.index")
@@ -399,6 +452,7 @@ def add_complaint_type():
         ComplaintType(
             name_ar=name_ar,
             name_en=name_en,
+            category=request.form.get("category", "delivery"),
             requires_online="requires_online" in request.form,
             sort_order=ComplaintType.query.count() + 1,
         )
@@ -417,6 +471,7 @@ def edit_complaint_type(type_id):
     ct = ComplaintType.query.get_or_404(type_id)
     ct.name_ar = request.form.get("name_ar", ct.name_ar).strip()
     ct.name_en = request.form.get("name_en", ct.name_en or "").strip()
+    ct.category = request.form.get("category", ct.category or "delivery")
     ct.requires_online = "requires_online" in request.form
     ct.is_active = "is_active" in request.form
     log_action("admin.type.edit", "complaint_type", type_id, ct.name_ar)

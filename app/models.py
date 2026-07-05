@@ -110,16 +110,39 @@ class Customer(db.Model):
     phone_number = db.Column(db.String(30), unique=True, index=True)
     city = db.Column(db.String(80))
     region = db.Column(db.String(80))
+    phone_hash = db.Column(db.String(64), unique=True, index=True)
+    enc_payload = db.Column(db.Text)
+
+    notes = db.relationship(
+        "CustomerNote",
+        back_populates="customer",
+        cascade="all, delete-orphan",
+        order_by="CustomerNote.created_at.desc()",
+    )
+
+
+class CustomerNote(db.Model):
+    __tablename__ = "customer_notes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False, index=True)
+    author_name = db.Column(db.String(120))
+    note_text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    customer = db.relationship("Customer", back_populates="notes")
 
 
 class Complaint(db.Model):
     __tablename__ = "complaints"
 
     complaint_id = db.Column(db.Integer, primary_key=True)
-    serial_number = db.Column(db.String(24), unique=True, index=True)
+    serial_number = db.Column(db.String(40), unique=True, index=True)
     phone_number = db.Column(db.String(30), nullable=False)
     complaint_type = db.Column(db.String(80))
+    complaint_category = db.Column(db.String(40))
     online_channel = db.Column(db.String(80))
+    channel_detail = db.Column(db.String(80))
     complaint_text = db.Column(db.Text, nullable=False)
     complaint_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     complaint_status = db.Column(db.String(40), default="مفتوحة")
@@ -131,6 +154,10 @@ class Complaint(db.Model):
     branch_code = db.Column(db.String(20), db.ForeignKey("branches.branch_code"))
     shift = db.Column(db.String(20))
     last_modified = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    is_escalated = db.Column(db.Boolean, default=False, index=True)
+    escalated_at = db.Column(db.DateTime)
+    escalated_by = db.Column(db.String(120))
+    escalation_reason = db.Column(db.Text)
 
     branch = db.relationship("Branch")
     details = db.relationship(
@@ -161,6 +188,7 @@ class ComplaintType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name_ar = db.Column(db.String(80), nullable=False)
     name_en = db.Column(db.String(80))
+    category = db.Column(db.String(40), default="delivery")
     requires_online = db.Column(db.Boolean, default=False)
     sort_order = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)

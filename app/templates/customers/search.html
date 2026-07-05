@@ -2,51 +2,56 @@
 {% block title %}{{ t('search_customer') }} - {{ brand }}{% endblock %}
 {% block content %}
 <h1 class="page-title">🔍 {{ t('search_customer') }}</h1>
-<form method="GET" class="filter-bar form-card">
-    <input type="text" name="phone" value="{{ phone }}" placeholder="{{ t('phone') }}" required>
+
+<form method="GET" class="filter-bar form-card customer-search-bar">
+    <input type="text" name="q" id="search-q" value="{{ query }}" placeholder="{{ t('search_customer_placeholder') }}" autocomplete="off">
     <button type="submit" class="btn btn-primary">{{ t('search') }}</button>
-    <a href="{{ url_for('customers.add', phone=phone) }}" class="btn btn-secondary">{{ t('add_customer') }}</a>
+    <a href="{{ url_for('customers.add', phone=query) }}" class="btn btn-secondary">{{ t('add_customer') }}</a>
 </form>
+<div id="live-results" class="customer-live-results" hidden></div>
 
-{% if phone and not customer %}
-<div class="alert alert-warning">{{ t('customer_not_found') }} — <a href="{{ url_for('customers.add', phone=phone) }}">{{ t('add_customer') }}</a></div>
+{% if query and not results %}
+<div class="alert alert-warning">{{ t('customer_not_found') }} — <a href="{{ url_for('customers.add', phone=query) }}">{{ t('add_customer') }}</a></div>
 {% endif %}
 
-{% if customer %}
-<div class="detail-card">
-    <h2>{{ t('customer_profile') }}</h2>
-    <p><strong>{{ t('first_name') }}:</strong> {{ customer.first_name or '—' }}</p>
-    <p><strong>{{ t('last_name') }}:</strong> {{ customer.last_name or '—' }}</p>
-    <p><strong>{{ t('phone') }}:</strong> {{ customer.phone_number }}</p>
-    <p><strong>{{ t('city') }}:</strong> {{ customer.city or '—' }}</p>
-    <p><strong>{{ t('region') }}:</strong> {{ customer.region or '—' }}</p>
-    <a href="{{ url_for('complaints.new_complaint', phone=customer.phone_number) }}" class="btn btn-primary">{{ t('continue_complaint') }}</a>
-</div>
-
-<h2 class="section-title">{{ t('complaint_history') }}</h2>
-<table class="data-table">
-    <thead>
+{% if results %}
+<section class="panel">
+    <h2 class="panel-title">{{ t('search_results') }}</h2>
+    <table class="data-table">
+        <thead><tr><th>{{ t('name') }}</th><th>{{ t('phone') }}</th><th>{{ t('city') }}</th><th></th></tr></thead>
+        <tbody>
+        {% for r in results %}
         <tr>
-            <th>{{ t('complaint_serial') }}</th>
-            <th>{{ t('complaint_type') }}</th>
-            <th>{{ t('status') }}</th>
-            <th>{{ t('date') }}</th>
-            <th></th>
+            <td>{{ r.name or '—' }}</td>
+            <td>{{ r.phone }}</td>
+            <td>{{ r.city or '—' }}</td>
+            <td><a href="{{ url_for('customers.profile', customer_id=r.id) }}" class="btn btn-sm btn-primary">{{ t('customer_card') }}</a></td>
         </tr>
-    </thead>
-    <tbody>
-    {% for c in complaints %}
-    <tr>
-        <td><span class="serial-badge">{{ t_serial(c) }}</span></td>
-        <td>{{ t_type(c.complaint_type) }}</td>
-        <td>{{ t_status(c.complaint_status) }}</td>
-        <td>{{ c.complaint_date.strftime('%Y-%m-%d %H:%M') }}</td>
-        <td><a href="{{ url_for('complaints.complaint_detail', complaint_id=c.complaint_id) }}" class="btn btn-sm">{{ t('details') }}</a></td>
-    </tr>
-    {% else %}
-    <tr><td colspan="5">{{ t('no_data') }}</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
 {% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+const PROFILE_URL = {{ url_for('customers.profile', customer_id=0)|tojson }}.replace('/0', '');
+const qInput = document.getElementById('search-q');
+const liveBox = document.getElementById('live-results');
+let timer;
+qInput.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = qInput.value.trim();
+    if (q.length < 2) { liveBox.hidden = true; return; }
+    timer = setTimeout(async () => {
+        const res = await fetch(`{{ url_for('customers.api_search') }}?q=${encodeURIComponent(q)}`);
+        const rows = await res.json();
+        if (!rows.length) { liveBox.hidden = true; return; }
+        liveBox.hidden = false;
+        liveBox.innerHTML = rows.map(r =>
+            `<a class="live-result-item" href="${PROFILE_URL}/${r.id}"><strong>${r.name||'—'}</strong> · ${r.phone} · ${r.city||''}</a>`
+        ).join('');
+    }, 300);
+});
+</script>
 {% endblock %}

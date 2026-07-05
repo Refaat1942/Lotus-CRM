@@ -26,12 +26,20 @@
         <option value="Morning">{{ t('shift_morning') }}</option>
         <option value="After">{{ t('shift_after') }}</option>
     </select>
+    <label class="filter-checkbox"><input type="checkbox" id="escalated"> {{ t('escalated_only') }}</label>
     <button class="btn btn-primary" onclick="searchComplaints()">{{ t('search') }}</button>
 </div>
+
+<div id="summary-panel" class="panel complaint-summary-panel" hidden>
+    <h2 class="panel-title">📌 {{ t('complaint_summary') }}</h2>
+    <div id="summary-text" class="complaint-summary-text"></div>
+    <a id="summary-detail-link" href="#" class="btn btn-sm btn-primary">{{ t('details') }}</a>
+</div>
+
 <table class="data-table" id="complaints-table">
     <thead>
         <tr>
-            <th>{{ t('complaint_serial') }}</th><th>{{ t('urgency') }}</th><th>{{ t('phone') }}</th><th>{{ t('customer') }}</th>
+            <th>{{ t('complaint_serial') }}</th><th>{{ t('complaint_category') }}</th><th>{{ t('urgency') }}</th><th>{{ t('phone') }}</th><th>{{ t('customer') }}</th>
             <th>{{ t('complaint_type') }}</th><th>{{ t('date') }}</th><th>{{ t('status') }}</th>
             <th>{{ t('branch') }}</th><th>{{ t('creator') }}</th><th>{{ t('assigned_agent') }}</th><th>{{ t('shift') }}</th><th>{{ t('actions') }}</th>
         </tr>
@@ -47,6 +55,16 @@ const today = new Date().toISOString().slice(0,10);
 document.getElementById('from').value = today;
 document.getElementById('to').value = today;
 
+let cachedRows = [];
+
+function showSummary(row) {
+    const panel = document.getElementById('summary-panel');
+    document.getElementById('summary-text').textContent = row.summary || '';
+    document.getElementById('summary-detail-link').href = DETAIL_URL + '/' + row.id;
+    panel.hidden = false;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 async function searchComplaints() {
     const params = new URLSearchParams({
         from: document.getElementById('from').value,
@@ -60,15 +78,19 @@ async function searchComplaints() {
         shift: document.getElementById('shift').value,
         lang: document.documentElement.lang || 'ar',
     });
+    if (document.getElementById('escalated').checked) params.set('escalated', '1');
     const res = await fetch(SEARCH_URL + '?' + params);
-    const rows = await res.json();
-    document.querySelector('#complaints-table tbody').innerHTML = rows.map(r => `
-        <tr class="${r.alert ? 'alert-row' : ''}">
-            <td><span class="serial-badge">${r.serial || r.id}</span></td><td>${r.urgency_label||r.urgency||'—'}</td><td>${r.phone}</td><td>${r.customer}</td><td>${r.type_label||r.type}</td>
-            <td>${r.date}</td><td>${r.status_label||r.status}</td><td>${r.branch}</td>
+    cachedRows = await res.json();
+    document.querySelector('#complaints-table tbody').innerHTML = cachedRows.map((r, i) => `
+        <tr class="${r.alert ? 'alert-row' : ''} ${r.escalated ? 'escalated-row' : ''}" onclick="showSummary(cachedRows[${i}])" style="cursor:pointer">
+            <td><span class="serial-badge">${r.serial || r.id}</span>${r.escalated ? ' <span class="badge badge-escalated">⬆</span>' : ''}</td>
+            <td>${r.category||'—'}</td><td>${r.urgency_label||r.urgency||'—'}</td><td>${r.phone}</td><td>${r.customer}</td>
+            <td>${r.type_label||r.type}</td><td>${r.date}</td><td>${r.status_label||r.status}</td><td>${r.branch}</td>
             <td>${r.creator}</td><td>${r.assigned||'—'}</td><td>${r.shift_label||r.shift}</td>
-            <td><a href="${DETAIL_URL}/${r.id}" class="btn btn-sm">{{ t('details') }}</a></td>
+            <td><a href="${DETAIL_URL}/${r.id}" class="btn btn-sm" onclick="event.stopPropagation()">{{ t('details') }}</a></td>
         </tr>`).join('');
+    if (cachedRows.length === 1) showSummary(cachedRows[0]);
+    else document.getElementById('summary-panel').hidden = true;
 }
 searchComplaints();
 </script>

@@ -14,57 +14,80 @@
 
     <section class="complaint-section">
         <h3 class="complaint-section-title">{{ t('customer') }}</h3>
-        <div class="form-grid complaint-customer-grid">
+        <div class="form-grid complaint-fields-grid">
             <div class="form-group">
-                <label>{{ t('phone') }}</label>
+                <label for="phone">{{ t('phone') }}</label>
                 <div class="input-group">
                     <input type="text" name="phone" id="phone" value="{{ prefill_phone }}" required>
                     <button type="button" class="btn btn-secondary" onclick="lookupCustomer()">{{ t('search') }}</button>
                 </div>
             </div>
-            <div class="form-group customer-info-panel" id="customer-panel">
-                <label>{{ t('customer_details') }}</label>
-                <div id="customer-info" class="customer-info-box muted-text">{{ t('search_customer_hint') }}</div>
+            <div class="form-group">
+                <label for="customer_name">{{ t('name') }}</label>
+                <input type="text" id="customer_name" readonly placeholder="—">
+            </div>
+            <div class="form-group">
+                <label for="customer_phone_display">{{ t('phone') }} ({{ t('customer_profile') }})</label>
+                <input type="text" id="customer_phone_display" readonly placeholder="—">
+            </div>
+            <div class="form-group">
+                <label for="customer_city">{{ t('city') }}</label>
+                <input type="text" id="customer_city" readonly placeholder="—">
+            </div>
+            <div class="form-group">
+                <label for="customer_region">{{ t('region') }}</label>
+                <input type="text" id="customer_region" readonly placeholder="—">
             </div>
         </div>
+        <p id="customer-status" class="hint muted-text">{{ t('search_customer_hint') }}</p>
     </section>
 
     <section class="complaint-section">
         <h3 class="complaint-section-title">{{ t('complaint_details') }}</h3>
-        <div class="form-grid">
+        <div class="form-grid complaint-fields-grid">
             <div class="form-group">
-                <label>{{ t('branch') }}</label>
-                <select name="branch_code" required>
+                <label for="complaint_category">{{ t('complaint_category') }}</label>
+                <select name="complaint_category" id="complaint_category" required onchange="onCategoryChange()">
+                    {% for key, label_key in categories %}
+                    <option value="{{ key }}">{{ t(label_key) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="complaint_type">{{ t('complaint_type') }}</label>
+                <select name="complaint_type" id="complaint_type" required></select>
+            </div>
+            <div class="form-group">
+                <label for="branch_code">{{ t('branch') }}</label>
+                <select name="branch_code" id="branch_code" required>
                     {% for b in branches %}
                     <option value="{{ b.branch_code }}" {{ 'selected' if default_branch==b.branch_code else '' }}>{{ b.branch_name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
-                <label>{{ t('complaint_type') }}</label>
-                <select name="complaint_type" id="complaint_type" onchange="toggleOnline()" required>
-                    {% for ct in complaint_types %}
-                    <option value="{{ ct.name_ar }}" data-online="{{ '1' if ct.requires_online else '0' }}">{{ ct.display_name(lang) }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>{{ t('urgency') }}</label>
-                <select name="urgency" required>
+                <label for="urgency">{{ t('urgency') }}</label>
+                <select name="urgency" id="urgency" required>
                     {% for u in urgencies %}
                     <option value="{{ u }}" {{ 'selected' if u=='متوسطة' else '' }}>{{ t_urgency(u) }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-group" id="online-group" style="display:none">
-                <label>{{ t('online_channel') }}</label>
-                <select name="online_channel">
-                    {% for ch in online_channels %}<option value="{{ ch }}">{{ ch }}</option>{% endfor %}
+            <div class="form-group" id="digital-group" hidden>
+                <label for="digital_channel">{{ t('digital_platform') }}</label>
+                <select name="channel_detail" id="digital_channel">
+                    {% for p in digital_platforms %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="form-group" id="online-group" hidden>
+                <label for="online_channel">{{ t('online_source') }}</label>
+                <select name="channel_detail" id="online_channel">
+                    {% for s in online_sources %}<option value="{{ s }}">{{ t('online_' ~ s|lower) }}</option>{% endfor %}
                 </select>
             </div>
             <div class="form-group full-width">
-                <label>{{ t('complaint_text') }}</label>
-                <textarea name="complaint_text" rows="5" required></textarea>
+                <label for="complaint_text">{{ t('complaint_text') }}</label>
+                <textarea name="complaint_text" id="complaint_text" rows="5" required></textarea>
             </div>
         </div>
     </section>
@@ -74,35 +97,46 @@
 {% endblock %}
 {% block extra_js %}
 <script>
-function toggleOnline() {
-    const sel = document.getElementById('complaint_type');
-    const opt = sel.options[sel.selectedIndex];
-    document.getElementById('online-group').style.display = opt.dataset.online === '1' ? 'block' : 'none';
-}
-toggleOnline();
+const TYPES_BY_CATEGORY = {{ types_by_category|tojson }};
 
-function renderCustomer(data) {
-    const box = document.getElementById('customer-info');
+function onCategoryChange() {
+    const cat = document.getElementById('complaint_category').value;
+    const typeSel = document.getElementById('complaint_type');
+    const types = TYPES_BY_CATEGORY[cat] || [];
+    typeSel.innerHTML = types.map(t => `<option value="${t.value}">${t.label}</option>`).join('');
+    document.getElementById('digital-group').hidden = cat !== 'digital';
+    document.getElementById('online-group').hidden = cat !== 'online';
+    document.getElementById('digital_channel').disabled = cat !== 'digital';
+    document.getElementById('online_channel').disabled = cat !== 'online';
+}
+
+function fillCustomer(data) {
+    const status = document.getElementById('customer-status');
     if (!data.found) {
-        box.innerHTML = '<span class="error-text">{{ t("customer_not_found") }}</span>';
-        box.className = 'customer-info-box error';
+        document.getElementById('customer_name').value = '';
+        document.getElementById('customer_phone_display').value = '';
+        document.getElementById('customer_city').value = '';
+        document.getElementById('customer_region').value = '';
+        status.textContent = '{{ t("customer_not_found") }}';
+        status.className = 'hint error-text';
         return;
     }
-    box.className = 'customer-info-box found';
-    box.innerHTML = `
-        <div class="customer-info-row"><span>{{ t('name') }}</span><strong>${data.name || '—'}</strong></div>
-        <div class="customer-info-row"><span>{{ t('phone') }}</span><strong>${data.phone || '—'}</strong></div>
-        <div class="customer-info-row"><span>{{ t('city') }}</span><strong>${data.city || '—'}</strong></div>
-        <div class="customer-info-row"><span>{{ t('region') }}</span><strong>${data.region || '—'}</strong></div>`;
+    document.getElementById('customer_name').value = data.name || '—';
+    document.getElementById('customer_phone_display').value = data.phone_raw || data.phone || '—';
+    document.getElementById('customer_city').value = data.city || '—';
+    document.getElementById('customer_region').value = data.region || '—';
+    status.textContent = '{{ t("customer_found") }}';
+    status.className = 'hint success-text';
 }
 
 async function lookupCustomer() {
     const phone = document.getElementById('phone').value.trim();
     if (!phone) return;
     const res = await fetch(`{{ url_for('complaints.lookup_customer', phone='PHONE') }}`.replace('PHONE', encodeURIComponent(phone)));
-    renderCustomer(await res.json());
+    fillCustomer(await res.json());
 }
 
+onCategoryChange();
 document.getElementById('phone').addEventListener('blur', lookupCustomer);
 if (document.getElementById('phone').value.trim()) lookupCustomer();
 </script>

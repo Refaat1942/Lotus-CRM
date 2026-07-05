@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ t('customer_card') }} — {{ customer_data.first_name }} {{ customer_data.last_name }} - {{ brand }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>👤 {{ t('customer_card') }}</h1>
+        <p class="subtitle">{{ customer_data.first_name }} {{ customer_data.last_name }}</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('complaints.new_complaint', phone=customer_data.phone_number) }}" class="btn btn-primary">{{ t('new_complaint') }}</a>
+        <a href="{{ url_for('customers.search') }}" class="btn btn-secondary">{{ t('back') }}</a>
+    </div>
+</div>
+
+<div class="customer-card-layout">
+    <aside class="customer-card-sidebar">
+        <section class="panel customer-card-profile">
+            <h2 class="panel-title">{{ t('customer_profile') }}</h2>
+            <div class="customer-profile-grid">
+                <div><span>{{ t('name') }}</span><strong>{{ customer_data.first_name }} {{ customer_data.last_name }}</strong></div>
+                <div><span>{{ t('phone') }}</span><strong>{{ customer_data.phone_number }}</strong></div>
+                <div><span>{{ t('city') }}</span><strong>{{ customer_data.city or '—' }}</strong></div>
+                <div><span>{{ t('region') }}</span><strong>{{ customer_data.region or '—' }}</strong></div>
+            </div>
+            <p class="muted-text"><small>🔒 {{ t('customer_encrypted_note') }}</small></p>
+        </section>
+
+        <section class="panel customer-stats-panel">
+            <h2 class="panel-title">{{ t('customer_stats') }}</h2>
+            <div class="stat-grid stat-grid-compact">
+                <div class="stat-card"><span>{{ t('total_complaints') }}</span><strong>{{ stats.total }}</strong></div>
+                <div class="stat-card stat-open"><span>{{ t('open') }}</span><strong>{{ stats.open }}</strong></div>
+                <div class="stat-card stat-progress"><span>{{ t('in_progress') }}</span><strong>{{ stats.in_progress }}</strong></div>
+                <div class="stat-card stat-closed"><span>{{ t('closed') }}</span><strong>{{ stats.closed }}</strong></div>
+            </div>
+            {% if stats.last_date %}
+            <p class="hint">{{ t('last_complaint') }}: {{ stats.last_date.strftime('%Y-%m-%d %H:%M') }}</p>
+            {% endif %}
+        </section>
+
+        <section class="panel">
+            <h2 class="panel-title">{{ t('customer_notes') }}</h2>
+            <form method="POST" class="stack-form">
+                <textarea name="note_text" rows="3" required placeholder="{{ t('customer_note_placeholder') }}"></textarea>
+                <button type="submit" class="btn btn-primary">{{ t('add_note') }}</button>
+            </form>
+            {% if notes %}
+            <ul class="customer-notes-list">
+                {% for n in notes %}
+                <li class="customer-note-item">
+                    <div class="customer-note-meta">
+                        <strong>{{ n.author_name }}</strong>
+                        <span>{{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </div>
+                    <p>{{ n.note_text }}</p>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty-state">{{ t('no_customer_notes') }}</p>
+            {% endif %}
+        </section>
+    </aside>
+
+    <section class="panel customer-history-panel">
+        <h2 class="panel-title">📋 {{ t('complaint_history') }}</h2>
+        {% if complaints %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>{{ t('complaint_serial') }}</th>
+                    <th>{{ t('complaint_category') }}</th>
+                    <th>{{ t('complaint_type') }}</th>
+                    <th>{{ t('status') }}</th>
+                    <th>{{ t('urgency') }}</th>
+                    <th>{{ t('date') }}</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in complaints %}
+            <tr class="{{ 'escalated-row' if c.is_escalated else '' }}">
+                <td><span class="serial-badge">{{ t_serial(c) }}</span>{% if c.is_escalated %} <span class="badge badge-escalated">{{ t('escalated') }}</span>{% endif %}</td>
+                <td>{% set cat = c.complaint_category or 'delivery' %}{{ t('category_' ~ cat) }}</td>
+                <td>{{ t_type(c.complaint_type) }}</td>
+                <td>{{ t_status(c.complaint_status) }}</td>
+                <td>{{ t_urgency(c.urgency or 'متوسطة') }}</td>
+                <td>{{ c.complaint_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td><a href="{{ url_for('complaints.complaint_detail', complaint_id=c.complaint_id) }}" class="btn btn-sm">{{ t('details') }}</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">{{ t('no_complaint_history') }}</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
