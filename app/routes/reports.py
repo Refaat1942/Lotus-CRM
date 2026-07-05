@@ -15,7 +15,7 @@ from app.services.i18n import translate_status, translate_urgency
 reports_bp = Blueprint("reports", __name__)
 
 STATUSES = ["مفتوحة", "جاري الحل", "مغلقة"]
-URGENCIES = ["ضعيفة", "متوسطة", "فورية"]
+from app.services.urgency import URGENCIES
 
 
 def _rows_to_excel(data):

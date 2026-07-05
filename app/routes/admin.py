@@ -33,6 +33,8 @@ from app.services.access import (
 )
 from app.services.audit import log_action
 from app.services.live_monitor import build_live_feed
+from app.services.sla import build_sla_matrix, save_sla_matrix
+from app.services.urgency import URGENCIES
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -90,6 +92,8 @@ def index():
         complaint_types=complaint_types,
         settings=_settings_dict(),
         roles=[ROLE_AGENT, ROLE_SUPERVISOR, ROLE_ADMIN],
+        sla_matrix=build_sla_matrix(complaint_types),
+        urgencies=URGENCIES,
     )
 
 
@@ -172,6 +176,35 @@ def update_user_role(user_id):
     db.session.commit()
     flash("permissions_updated", "success")
     return redirect(url_for("admin.index", tab="agents"))
+
+
+@admin_bp.route("/users/<int:user_id>/password", methods=["POST"])
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def reset_user_password(user_id):
+    user = User.query.get_or_404(user_id)
+    new_password = request.form.get("new_password", "").strip()
+    if len(new_password) < 4:
+        flash("required_fields", "error")
+        return redirect(url_for("admin.index", tab="agents"))
+    user.set_password(new_password)
+    log_action("user.password_reset", "user", user.id, user.username)
+    db.session.commit()
+    flash("password_updated", "success")
+    return redirect(url_for("admin.index", tab="agents"))
+
+
+@admin_bp.route("/sla/save", methods=["POST"])
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def save_sla_settings():
+    types = ComplaintType.query.order_by(ComplaintType.sort_order).all()
+    save_sla_matrix(request.form, types)
+    db.session.commit()
+    flash("settings_saved", "success")
+    return redirect(url_for("admin.index", tab="sla"))
 
 
 @admin_bp.route("/permissions/<int:user_id>", methods=["POST"])

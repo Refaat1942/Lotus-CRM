@@ -97,6 +97,17 @@ def create_app(config_class=Config):
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(app.instance_path, exist_ok=True)
 
+    @app.before_request
+    def _load_language():
+        from flask import request, session
+
+        if "lang" not in session:
+            cookie_lang = request.cookies.get("lotus_lang")
+            if cookie_lang in ("ar", "en"):
+                session["lang"] = cookie_lang
+            else:
+                session["lang"] = app.config.get("DEFAULT_LANGUAGE", "ar")
+
     from app.services.migrate import run_startup_migrations
 
     try:

@@ -58,6 +58,7 @@ async function searchComplaints() {
         creator: document.getElementById('creator').value,
         assigned: document.getElementById('assigned').value,
         shift: document.getElementById('shift').value,
+        lang: document.documentElement.lang || 'ar',
     });
     const res = await fetch(SEARCH_URL + '?' + params);
     const rows = await res.json();

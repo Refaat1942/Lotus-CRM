@@ -338,7 +338,48 @@ body.lang-en .notif-urgent a { border-right: none; border-left: 3px solid var(--
 .urgency-badge { padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.82rem; font-weight: 700; }
 .urgency-ضعيفة, .urgency-weak { background: #e8f5e9; color: #2e7d32; }
 .urgency-متوسطة, .urgency-moderate { background: #fff3e0; color: #ef6c00; }
+.urgency-عالية, .urgency-high { background: #fce4ec; color: #c2185b; }
 .urgency-فورية, .urgency-immediate { background: #ffebee; color: #c62828; }
+
+.complaint-form .complaint-section {
+    margin-bottom: 1.25rem; padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.complaint-section-title {
+    font-size: 0.85rem; font-weight: 800; color: var(--primary-dark);
+    text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.75rem;
+}
+.complaint-customer-grid { grid-template-columns: 1fr 1.2fr; align-items: start; }
+.customer-info-box {
+    min-height: 110px; padding: 0.75rem; border-radius: 8px;
+    border: 1px solid var(--border); background: #f8fafb; font-size: 0.88rem;
+}
+.customer-info-box.found { background: #e8f5e9; border-color: #a5d6a7; }
+.customer-info-box.error { background: #ffebee; border-color: #ef9a9a; }
+.customer-info-row {
+    display: flex; justify-content: space-between; gap: 1rem;
+    padding: 0.25rem 0; border-bottom: 1px dashed color-mix(in srgb, var(--border) 70%, white);
+}
+.customer-info-row:last-child { border-bottom: none; }
+.error-text { color: var(--danger); font-weight: 600; }
+
+.user-meta { padding: 0 1rem 0.5rem; font-size: 0.82rem; }
+.user-password-form {
+    padding: 0.75rem 1rem 1rem; border-top: 1px dashed var(--border);
+    background: #fafcfd;
+}
+.user-password-form label {
+    display: block; font-size: 0.82rem; font-weight: 700; color: var(--muted); margin-bottom: 0.35rem;
+}
+.user-password-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.user-password-row input { flex: 1; min-width: 160px; padding: 0.5rem 0.65rem; border: 1px solid var(--border); border-radius: 8px; }
+.sla-table .sla-input { width: 70px; padding: 0.35rem; border: 1px solid var(--border); border-radius: 6px; }
+.sla-table td, .sla-table th { text-align: center; vertical-align: middle; }
+.sla-table td:first-child, .sla-table th:first-child { text-align: start; min-width: 160px; }
+
+@media (max-width: 768px) {
+    .complaint-customer-grid { grid-template-columns: 1fr; }
+}
 
 .badge-success { background: #e8f5e9; color: #2e7d32; }
 .badge-danger { background: #ffebee; color: #c62828; }

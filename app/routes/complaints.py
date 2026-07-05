@@ -15,12 +15,12 @@ from app.services.complaints import (
     my_complaints_filter,
 )
 from app.services.i18n import translate_shift, translate_status, translate_urgency
+from app.services.urgency import URGENCIES, URGENCY_DEFAULT
 
 complaints_bp = Blueprint("complaints", __name__)
 
 ONLINE_CHANNELS = ["Instashop", "Talabat", "Chefaa", "Website", "Lotus Pharmacies App"]
 STATUSES = ["مفتوحة", "جاري الحل", "مغلقة"]
-URGENCIES = ["ضعيفة", "متوسطة", "فورية"]
 
 
 def _active_types():
@@ -49,9 +49,16 @@ def _agent_employee():
     return None
 
 
-def _agent_name():
+def _creator_identity():
+    """Logged-in user — no separate employee selection on the form."""
     emp = _agent_employee()
-    return emp.employee_name if emp else current_user.username
+    if emp:
+        return emp.employee_code, emp.employee_name
+    return current_user.employee_code, current_user.username
+
+
+def _agent_name():
+    return _creator_identity()[1]
 
 
 def _active_agents():
@@ -83,22 +90,26 @@ def new_complaint():
     types = _active_types()
 
     if request.method == "POST":
-        emp_code = request.form.get("employee_code") or (agent.employee_code if agent else None)
-        branch_code = request.form.get("branch_code") or (agent.branch_code if agent else None)
+        emp_code, agent_name = _creator_identity()
+        branch_code = request.form.get("branch_code")
+        if not branch_code:
+            emp = _agent_employee()
+            branch_code = emp.branch_code if emp else None
         phone = request.form.get("phone", "").strip()
         ctype = request.form.get("complaint_type")
         text = request.form.get("complaint_text", "").strip()
         channel = request.form.get("online_channel") if _type_requires_online(ctype) else None
-        urgency = request.form.get("urgency", "متوسطة")
+        urgency = request.form.get("urgency", URGENCY_DEFAULT)
         if urgency not in URGENCIES:
-            urgency = "متوسطة"
+            urgency = URGENCY_DEFAULT
 
-        if not all([emp_code, branch_code, phone, text, ctype]):
+        if not all([branch_code, phone, text, ctype]):
             flash("required_fields", "error")
             return redirect(url_for("complaints.new_complaint", phone=phone))
 
-        emp = Employee.query.get(emp_code)
-        agent_name = emp.employee_name if emp else _agent_name()
+        emp = Employee.query.get(emp_code) if emp_code else None
+        if emp:
+            agent_name = emp.employee_name
         now = datetime.now()
         serial = generate_complaint_serial(now)
         complaint = Complaint(
@@ -145,9 +156,8 @@ def new_complaint():
         branches=branches,
         complaint_types=types,
         online_channels=ONLINE_CHANNELS,
-        agent=agent,
         prefill_phone=prefill_phone,
-        lang=session.get("lang", "ar"),
+        default_branch=agent.branch_code if agent else None,
         urgencies=URGENCIES,
     )
 
@@ -159,8 +169,17 @@ def lookup_customer(phone):
     cust = Customer.query.filter_by(phone_number=phone).first()
     if not cust:
         return jsonify({"found": False})
+    name = f"{cust.first_name or ''} {cust.last_name or ''}".strip()
     return jsonify(
-        {"found": True, "name": f"{cust.first_name or ''} {cust.last_name or ''}".strip()}
+        {
+            "found": True,
+            "name": name,
+            "first_name": cust.first_name or "",
+            "last_name": cust.last_name or "",
+            "phone": cust.phone_number,
+            "city": cust.city or "",
+            "region": cust.region or "",
+        }
     )
 
 
@@ -179,7 +198,9 @@ def list_complaints():
 @login_required
 @feature_required("complaints.list_complaints")
 def search_complaints():
-    lang = session.get("lang", "ar")
+    lang = request.args.get("lang") or session.get("lang", "ar")
+    if lang not in ("ar", "en"):
+        lang = "ar"
     date_from = request.args.get("from")
     date_to = request.args.get("to")
     status = request.args.get("status", "الكل")

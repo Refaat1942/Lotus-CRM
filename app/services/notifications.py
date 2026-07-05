@@ -8,7 +8,8 @@ from app.models import AppSetting, Complaint
 from app.services.complaints import complaint_display_number, my_complaints_filter
 from app.services.i18n import translate_status, translate_urgency
 
-URGENCY_IMMEDIATE = "فورية"
+from app.services.urgency import URGENCY_IMMEDIATE
+
 OPEN_STATUSES = ("مفتوحة", "جاري الحل")
 
 

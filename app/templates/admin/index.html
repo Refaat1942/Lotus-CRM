@@ -6,6 +6,7 @@
 <div class="admin-tabs-nav">
     <a href="?tab=agents" class="{{ 'active' if request.args.get('tab')=='agents' else '' }}">{{ t('user_management') }}</a>
     <a href="?tab=types" class="{{ 'active' if request.args.get('tab')=='types' else '' }}">{{ t('complaint_types') }}</a>
+    <a href="?tab=sla" class="{{ 'active' if request.args.get('tab')=='sla' else '' }}">{{ t('sla_settings') }}</a>
     <a href="?tab=branches" class="{{ 'active' if request.args.get('tab')=='branches' else '' }}">{{ t('branch_emails') }}</a>
     <a href="?tab=import" class="{{ 'active' if request.args.get('tab')=='import' else '' }}">{{ t('upload_excel') }}</a>
     <a href="?tab=settings" class="{{ 'active' if request.args.get('tab','settings')=='settings' else '' }}">{{ t('settings') }}</a>
@@ -69,6 +70,9 @@
                     </span>
                     <span class="user-summary-edit">{{ t('edit') }} ▾</span>
                 </summary>
+                <div class="user-meta muted-text">
+                    {% if u.created_at %}{{ t('created') }}: {{ u.created_at.strftime('%Y-%m-%d') }}{% endif %}
+                </div>
                 <form method="POST" action="{{ url_for('admin.update_user_role', user_id=u.id) }}" class="user-perm-form" data-user-form>
                     <div class="user-role-bar">
                         <label class="user-role-label">{{ t('role') }}</label>
@@ -132,6 +136,13 @@
                         <button type="submit" formaction="{{ url_for('admin.delete_user', user_id=u.id) }}" formmethod="post" class="btn btn-danger" onclick="return confirm('{{ t('confirm_delete') }}')">{{ t('delete') }}</button>
                     </div>
                 </form>
+                <form method="POST" action="{{ url_for('admin.reset_user_password', user_id=u.id) }}" class="user-password-form">
+                    <label>{{ t('reset_password') }}</label>
+                    <div class="user-password-row">
+                        <input type="password" name="new_password" minlength="4" placeholder="{{ t('new_password') }}" required autocomplete="new-password">
+                        <button type="submit" class="btn btn-sm btn-secondary">{{ t('reset_password') }}</button>
+                    </div>
+                </form>
             </details>
             {% endif %}
             {% endfor %}
@@ -167,6 +178,45 @@ window.LOTUS_ROLE_PRESETS = {{ role_presets|tojson }};
         {% endfor %}
         </tbody>
     </table>
+</section>
+{% elif tab == 'sla' %}
+<section class="panel">
+    <h2 class="panel-title">{{ t('sla_settings') }}</h2>
+    <p class="subtitle">{{ t('sla_hint') }}</p>
+    <form method="POST" action="{{ url_for('admin.save_sla_settings') }}">
+        <div class="table-wrap">
+            <table class="data-table sla-table">
+                <thead>
+                    <tr>
+                        <th>{{ t('complaint_type') }}</th>
+                        {% for u in urgencies %}
+                        <th>{{ t_urgency(u) }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in sla_matrix %}
+                <tr>
+                    <td>
+                        {% if row.label_key %}
+                        <strong>{{ t(row.label_key) }}</strong>
+                        {% else %}
+                        {{ row.name_ar }}{% if row.name_en %} / {{ row.name_en }}{% endif %}
+                        {% endif %}
+                    </td>
+                    {% for u in urgencies %}
+                    <td>
+                        <input type="number" min="1" name="sla_{{ row.key }}_{{ u }}" value="{{ row.hours[u] }}" class="sla-input">
+                        <small class="muted-text">{{ t('hours') }}</small>
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
+    </form>
 </section>
 {% elif tab == 'branches' %}
 <section class="panel">

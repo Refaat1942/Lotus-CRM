@@ -2,105 +2,108 @@
 {% block title %}{{ t('new_complaint') }} - {{ brand }}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>📝 {{ t('new_complaint') }}</h1>
+    <div>
+        <h1>📝 {{ t('new_complaint') }}</h1>
+        <p class="subtitle">{{ t('logged_in_as') }}: <strong>{{ current_user.username }}</strong></p>
+    </div>
     <a href="{{ url_for('customers.search') }}" class="btn btn-secondary">{{ t('search_customer') }}</a>
 </div>
 
-<form method="POST" class="form-card">
+<form method="POST" class="form-card complaint-form">
     <div class="form-steps-hint">{{ t('step2') }}: {{ t('record_complaint') }}</div>
-    <div class="form-grid">
-        {% if agent %}
-        <div class="form-group full-width agent-banner">
-            {{ t('employee') }}: <strong>{{ agent.employee_code }} – {{ agent.employee_name }}</strong>
-            <input type="hidden" name="employee_code" value="{{ agent.employee_code }}">
-            {% if agent.branch_code %}
-            <input type="hidden" name="branch_code" value="{{ agent.branch_code }}">
-            {{ t('branch') }}: <strong>{{ agent.branch_code }}</strong>
-            {% endif %}
-        </div>
-        {% else %}
-        <div class="form-group">
-            <label>{{ t('employee') }}</label>
-            <select name="employee_code" required>
-                <option value="">--</option>
-                {% for e in employees %}
-                <option value="{{ e.employee_code }}">{{ e.employee_code }} - {{ e.employee_name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group">
-            <label>{{ t('branch') }}</label>
-            <select name="branch_code" required>
-                <option value="">--</option>
-                {% for b in branches %}
-                <option value="{{ b.branch_code }}">{{ b.branch_code }} - {{ b.branch_name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        {% endif %}
 
-        <div class="form-group">
-            <label>{{ t('phone') }}</label>
-            <div class="input-group">
-                <input type="text" name="phone" id="phone" value="{{ prefill_phone }}" required>
-                <button type="button" class="btn btn-secondary" onclick="lookupCustomer()">{{ t('search') }}</button>
+    <section class="complaint-section">
+        <h3 class="complaint-section-title">{{ t('customer') }}</h3>
+        <div class="form-grid complaint-customer-grid">
+            <div class="form-group">
+                <label>{{ t('phone') }}</label>
+                <div class="input-group">
+                    <input type="text" name="phone" id="phone" value="{{ prefill_phone }}" required>
+                    <button type="button" class="btn btn-secondary" onclick="lookupCustomer()">{{ t('search') }}</button>
+                </div>
             </div>
-            <span id="customer-info" class="hint"></span>
+            <div class="form-group customer-info-panel" id="customer-panel">
+                <label>{{ t('customer_details') }}</label>
+                <div id="customer-info" class="customer-info-box muted-text">{{ t('search_customer_hint') }}</div>
+            </div>
         </div>
-        <div class="form-group">
-            <label>{{ t('complaint_type') }}</label>
-            <select name="complaint_type" id="complaint_type" onchange="toggleOnline()" required>
-                {% for ct in complaint_types %}
-                <option value="{{ ct.name_ar }}" data-online="{{ '1' if ct.requires_online else '0' }}">{{ ct.display_name(lang) }}</option>
-                {% endfor %}
-            </select>
+    </section>
+
+    <section class="complaint-section">
+        <h3 class="complaint-section-title">{{ t('complaint_details') }}</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>{{ t('branch') }}</label>
+                <select name="branch_code" required>
+                    {% for b in branches %}
+                    <option value="{{ b.branch_code }}" {{ 'selected' if default_branch==b.branch_code else '' }}>{{ b.branch_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ t('complaint_type') }}</label>
+                <select name="complaint_type" id="complaint_type" onchange="toggleOnline()" required>
+                    {% for ct in complaint_types %}
+                    <option value="{{ ct.name_ar }}" data-online="{{ '1' if ct.requires_online else '0' }}">{{ ct.display_name(lang) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{ t('urgency') }}</label>
+                <select name="urgency" required>
+                    {% for u in urgencies %}
+                    <option value="{{ u }}" {{ 'selected' if u=='متوسطة' else '' }}>{{ t_urgency(u) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" id="online-group" style="display:none">
+                <label>{{ t('online_channel') }}</label>
+                <select name="online_channel">
+                    {% for ch in online_channels %}<option value="{{ ch }}">{{ ch }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="form-group full-width">
+                <label>{{ t('complaint_text') }}</label>
+                <textarea name="complaint_text" rows="5" required></textarea>
+            </div>
         </div>
-        <div class="form-group" id="online-group" style="display:none">
-            <label>{{ t('online_channel') }}</label>
-            <select name="online_channel">
-                {% for ch in online_channels %}<option value="{{ ch }}">{{ ch }}</option>{% endfor %}
-            </select>
-        </div>
-        <div class="form-group">
-            <label>{{ t('urgency') }}</label>
-            <select name="urgency" required>
-                {% for u in urgencies %}
-                <option value="{{ u }}" {{ 'selected' if u=='متوسطة' else '' }}>{{ t_urgency(u) }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group full-width">
-            <label>{{ t('complaint_text') }}</label>
-            <textarea name="complaint_text" rows="5" required></textarea>
-        </div>
-    </div>
-    {% if agent and not agent.branch_code %}
-    <div class="form-group"><label>{{ t('branch') }}</label>
-        <select name="branch_code" required>
-            {% for b in branches %}<option value="{{ b.branch_code }}">{{ b.branch_name }}</option>{% endfor %}
-        </select>
-    </div>
-    {% endif %}
+    </section>
+
     <button type="submit" class="btn btn-primary btn-lg">💾 {{ t('save') }}</button>
 </form>
 {% endblock %}
 {% block extra_js %}
 <script>
-const ONLINE_TYPE = '1';
 function toggleOnline() {
     const sel = document.getElementById('complaint_type');
     const opt = sel.options[sel.selectedIndex];
     document.getElementById('online-group').style.display = opt.dataset.online === '1' ? 'block' : 'none';
 }
 toggleOnline();
+
+function renderCustomer(data) {
+    const box = document.getElementById('customer-info');
+    if (!data.found) {
+        box.innerHTML = '<span class="error-text">{{ t("customer_not_found") }}</span>';
+        box.className = 'customer-info-box error';
+        return;
+    }
+    box.className = 'customer-info-box found';
+    box.innerHTML = `
+        <div class="customer-info-row"><span>{{ t('name') }}</span><strong>${data.name || '—'}</strong></div>
+        <div class="customer-info-row"><span>{{ t('phone') }}</span><strong>${data.phone || '—'}</strong></div>
+        <div class="customer-info-row"><span>{{ t('city') }}</span><strong>${data.city || '—'}</strong></div>
+        <div class="customer-info-row"><span>{{ t('region') }}</span><strong>${data.region || '—'}</strong></div>`;
+}
+
 async function lookupCustomer() {
     const phone = document.getElementById('phone').value.trim();
-    const info = document.getElementById('customer-info');
     if (!phone) return;
     const res = await fetch(`{{ url_for('complaints.lookup_customer', phone='PHONE') }}`.replace('PHONE', encodeURIComponent(phone)));
-    const data = await res.json();
-    info.textContent = data.found ? data.name : '{{ t("customer_not_found") }}';
-    info.className = 'hint ' + (data.found ? 'success' : 'error');
+    renderCustomer(await res.json());
 }
+
+document.getElementById('phone').addEventListener('blur', lookupCustomer);
+if (document.getElementById('phone').value.trim()) lookupCustomer();
 </script>
 {% endblock %}

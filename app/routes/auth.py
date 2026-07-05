@@ -21,6 +21,9 @@ def login():
                 flash("account_blocked", "error")
                 return render_template("auth/login.html")
             login_user(user, remember=True)
+            session.permanent = True
+            if "lang" not in session:
+                session["lang"] = request.cookies.get("lotus_lang") or "ar"
             log_action("user.login", "user", user.id)
             db.session.commit()
             return redirect(url_for("main.agent_home"))
@@ -40,5 +43,12 @@ def logout():
 @auth_bp.route("/set-language/<lang>")
 def set_language(lang):
     if lang in ("ar", "en"):
+        session.permanent = True
         session["lang"] = lang
-    return redirect(request.referrer or url_for("main.agent_home"))
+    next_url = request.referrer or url_for("main.agent_home")
+    if not next_url or "set-language" in next_url:
+        next_url = url_for("main.agent_home")
+    resp = redirect(next_url)
+    if lang in ("ar", "en"):
+        resp.set_cookie("lotus_lang", lang, max_age=60 * 60 * 24 * 365, samesite="Lax")
+    return resp

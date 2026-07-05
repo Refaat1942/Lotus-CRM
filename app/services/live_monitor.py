@@ -7,6 +7,7 @@ from app.extensions import db
 from app.models import AuditLog, Complaint, ComplaintDetail, User
 from app.services.complaints import complaint_display_number
 from app.services.i18n import translate_status, translate_urgency
+from app.services.urgency import URGENCY_IMMEDIATE
 
 
 def build_live_feed(lang="ar", limit=40):
@@ -18,7 +19,7 @@ def build_live_feed(lang="ar", limit=40):
     open_count = Complaint.query.filter(Complaint.complaint_status.in_(("مفتوحة", "جاري الحل"))).count()
     immediate_count = Complaint.query.filter(
         Complaint.complaint_status.in_(("مفتوحة", "جاري الحل")),
-        Complaint.urgency == "فورية",
+        Complaint.urgency == URGENCY_IMMEDIATE,
     ).count()
     unassigned = Complaint.query.filter(
         Complaint.complaint_status.in_(("مفتوحة", "جاري الحل")),

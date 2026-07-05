@@ -171,6 +171,19 @@ class ComplaintType(db.Model):
         return self.name_ar
 
 
+class ComplaintSlaRule(db.Model):
+    """Target response time (hours) per complaint type and urgency."""
+
+    __tablename__ = "complaint_sla_rules"
+
+    id = db.Column(db.Integer, primary_key=True)
+    complaint_type = db.Column(db.String(80), nullable=True)
+    urgency = db.Column(db.String(20), nullable=False)
+    response_hours = db.Column(db.Integer, nullable=False, default=24)
+
+    __table_args__ = (db.UniqueConstraint("complaint_type", "urgency"),)
+
+
 class AuditLog(db.Model):
     __tablename__ = "audit_logs"
 
