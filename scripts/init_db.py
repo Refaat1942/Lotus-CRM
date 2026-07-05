@@ -206,9 +206,13 @@ def init_db():
     os.environ["SKIP_STARTUP_MIGRATIONS"] = "1"
     app = create_app()
     with app.app_context():
+        print("[init_db] Ensuring upload folders...", flush=True)
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+        print("[init_db] Ensuring database schema...", flush=True)
         ensure_database_schema()
+        print("[init_db] Running migrations...", flush=True)
         migrate_schema()
+        print("[init_db] Syncing menu functions...", flush=True)
         _ensure_functions()
         _disable_legacy_modules()
         _dedupe_menu_functions()
@@ -283,8 +287,15 @@ def init_db():
 
         db.session.commit()
         sync_new_functions_to_users()
-        print("Database initialized successfully.")
+        print("Database initialized successfully.", flush=True)
 
 
 if __name__ == "__main__":
-    init_db()
+    try:
+        init_db()
+    except Exception as exc:
+        print(f"init_db FAILED: {exc}", flush=True)
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)

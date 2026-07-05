@@ -1,10 +1,12 @@
 #!/bin/sh
-set -e
-
 export SKIP_STARTUP_MIGRATIONS=1
 
 echo "[lotus-crm] Running database init/migrations..."
-python scripts/init_db.py
+if python scripts/init_db.py; then
+  echo "[lotus-crm] Database init OK"
+else
+  echo "[lotus-crm] WARNING: database init failed — starting web server anyway"
+fi
 
 echo "[lotus-crm] Starting web server on port 16350..."
 exec gunicorn \
@@ -12,5 +14,6 @@ exec gunicorn \
   --workers 1 \
   --threads 4 \
   --timeout 120 \
-  --preload \
+  --access-logfile - \
+  --error-logfile - \
   run:app

@@ -95,7 +95,6 @@ def migrate_schema():
                     "lpad(complaint_id::text, 4, '0') "
                     "WHERE serial_number IS NULL"
                 ),
-                "CREATE UNIQUE INDEX IF NOT EXISTS ix_complaints_serial_number ON complaints (serial_number)",
                 (
                     "UPDATE complaints SET assigned_to_code = created_by_code, "
                     "assigned_to_name = created_by_name "
@@ -146,6 +145,12 @@ def migrate_schema():
             _run_sql(["ALTER TABLE complaints ALTER COLUMN serial_number TYPE VARCHAR(40)"])
         except ProgrammingError:
             pass
+        try:
+            _run_sql(
+                ["CREATE UNIQUE INDEX IF NOT EXISTS ix_complaints_serial_number ON complaints (serial_number)"]
+            )
+        except ProgrammingError:
+            pass
 
     if "customer_notes" not in tables:
         _create_table_safe(db.metadata.tables["customer_notes"])
@@ -155,6 +160,7 @@ def migrate_schema():
         from app.services.customer_data import encrypt_all_legacy_customers
 
         if AppSetting.get("legacy_customers_encrypted") != "1":
+            print("[init_db] Encrypting legacy customer rows (one-time)...", flush=True)
             encrypt_all_legacy_customers()
             AppSetting.set("legacy_customers_encrypted", "1")
 

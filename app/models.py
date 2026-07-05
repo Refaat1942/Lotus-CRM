@@ -101,6 +101,9 @@ class Employee(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
     branch = db.relationship("Branch")
+
+
+class Customer(db.Model):
     __tablename__ = "customers"
 
     id = db.Column(db.Integer, primary_key=True)
