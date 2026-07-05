@@ -43,16 +43,18 @@ def _active_types():
 
 def _types_by_category(lang="ar"):
     grouped = {key: [] for key, _ in CATEGORIES}
+    fallback = []
     for ct in _active_types():
-        cat = ct.category or "delivery"
+        entry = {"value": ct.name_ar, "label": ct.display_name(lang)}
+        cat = (ct.category or "delivery").strip().lower()
         if cat not in grouped:
-            grouped[cat] = []
-        grouped[cat].append(
-            {
-                "value": ct.name_ar,
-                "label": ct.display_name(lang),
-            }
-        )
+            cat = "delivery"
+        grouped[cat].append(entry)
+        fallback.append(entry)
+    if fallback:
+        for key in grouped:
+            if not grouped[key]:
+                grouped[key] = list(fallback)
     return grouped
 
 

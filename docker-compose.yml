@@ -33,9 +33,13 @@ services:
     volumes:
       - ./backups:/backups
       - ./app/static/uploads:/app/app/static/uploads
-    command: >
-      sh -c "python scripts/init_db.py &&
-             exec gunicorn --bind 0.0.0.0:16350 --workers 2 --timeout 120 --preload run:app"
+    command: ["sh", "/app/scripts/start.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:16350/login', timeout=5)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
   backup:
     image: postgres:16-alpine
@@ -52,12 +56,11 @@ services:
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
     volumes:
       - ./backups:/backups
-      - ./scripts/backup_db.sh:/backup_db.sh:ro
+      - ./scripts/backup_db.sh:/backup_db.sh
     entrypoint: /bin/sh
     command: >
-      -c "chmod +x /backup_db.sh &&
-          while true; do
-            /backup_db.sh >> /backups/backup.log 2>&1;
+      -c "while true; do
+            sh /backup_db.sh >> /backups/backup.log 2>&1 || true;
             sleep 86400;
           done"
 

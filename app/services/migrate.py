@@ -119,6 +119,10 @@ def migrate_schema():
                 "ALTER TABLE complaint_types ADD COLUMN IF NOT EXISTS category VARCHAR(40) DEFAULT 'delivery'",
                 "UPDATE complaint_types SET category = 'delivery' WHERE category IS NULL",
                 "UPDATE complaint_types SET category = 'online' WHERE name_ar = 'مشكلة اون لاين'",
+                "UPDATE complaint_types SET category = 'online' WHERE category = 'delivery' AND (name_ar ILIKE '%اون%' OR name_en ILIKE '%online%')",
+                "UPDATE complaint_types SET category = 'digital' WHERE category = 'delivery' AND (name_ar ILIKE '%رقم%' OR name_en ILIKE '%digital%')",
+                "UPDATE complaint_types SET category = 'cash' WHERE category = 'delivery' AND (name_ar ILIKE '%دفع%' OR name_ar ILIKE '%استرداد%' OR name_en ILIKE '%payment%' OR name_en ILIKE '%refund%')",
+                "UPDATE complaint_types SET category = 'insurance' WHERE category = 'delivery' AND (name_ar ILIKE '%تأمين%' OR name_en ILIKE '%insur%' OR name_en ILIKE '%coverage%' OR name_en ILIKE '%authorization%')",
             ]
         )
     if "customers" in tables:
@@ -147,9 +151,12 @@ def migrate_schema():
         _create_table_safe(db.metadata.tables["customer_notes"])
 
     if "customers" in tables:
+        from app.models import AppSetting
         from app.services.customer_data import encrypt_all_legacy_customers
 
-        encrypt_all_legacy_customers()
+        if AppSetting.get("legacy_customers_encrypted") != "1":
+            encrypt_all_legacy_customers()
+            AppSetting.set("legacy_customers_encrypted", "1")
 
 
 def run_startup_migrations(app):
