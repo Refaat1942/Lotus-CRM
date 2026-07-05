@@ -1,16 +1,38 @@
 {% extends "base.html" %}
 {% block title %}{{ t('add_customer') }} - {{ brand }}{% endblock %}
 {% block content %}
-<h1 class="page-title">👤 {{ t('add_customer') }}</h1>
-<form method="POST" class="form-card">
-    <div class="form-grid">
-        <div class="form-group"><label>{{ t('first_name') }}</label><input name="first_name" required></div>
-        <div class="form-group"><label>{{ t('last_name') }}</label><input name="last_name" required></div>
-        <div class="form-group"><label>{{ t('phone') }} *</label><input name="phone_number" value="{{ prefill_phone }}" required></div>
-        <div class="form-group"><label>{{ t('city') }}</label><input name="city"></div>
-        <div class="form-group"><label>{{ t('region') }}</label><input name="region"></div>
+<div class="page-header">
+    <h1>👤 {{ t('add_customer') }}</h1>
+</div>
+<form method="POST" class="form-card elegant-form">
+    <section class="form-section">
+        <h3 class="section-heading">{{ t('customer_details') }}</h3>
+        <div class="form-grid fields-3">
+            <div class="form-group">
+                <label for="first_name">{{ t('first_name') }}</label>
+                <input id="first_name" name="first_name" class="field-control" required>
+            </div>
+            <div class="form-group">
+                <label for="last_name">{{ t('last_name') }}</label>
+                <input id="last_name" name="last_name" class="field-control" required>
+            </div>
+            <div class="form-group">
+                <label for="phone_number">{{ t('phone') }} *</label>
+                <input id="phone_number" name="phone_number" class="field-control" value="{{ prefill_phone }}" required>
+            </div>
+            <div class="form-group">
+                <label for="city">{{ t('city') }}</label>
+                <input id="city" name="city" class="field-control">
+            </div>
+            <div class="form-group">
+                <label for="region">{{ t('region') }}</label>
+                <input id="region" name="region" class="field-control">
+            </div>
+        </div>
+    </section>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
+        <a href="{{ url_for('customers.search') }}" class="btn btn-secondary">{{ t('back') }}</a>
     </div>
-    <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
-    <a href="{{ url_for('customers.search') }}" class="btn btn-secondary">{{ t('back') }}</a>
 </form>
 {% endblock %}

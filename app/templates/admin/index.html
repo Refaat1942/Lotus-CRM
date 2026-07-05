@@ -240,18 +240,40 @@ window.LOTUS_ROLE_PRESETS = {{ role_presets|tojson }};
 <section class="panel">
     <h2 class="panel-title">{{ t('branch_emails') }}</h2>
     <p class="subtitle">{{ t('branch_emails_hint') }}</p>
+    <div class="branch-cards">
     {% for b in branches %}
-    <form method="POST" action="{{ url_for('admin.save_branch_emails') }}" class="panel stack-form" style="margin-bottom:1rem">
+    <form method="POST" action="{{ url_for('admin.save_branch_emails') }}" class="branch-card elegant-form">
         <input type="hidden" name="branch_code" value="{{ b.branch_code }}">
-        <strong>{{ b.branch_code }}</strong>
-        <input name="branch_name" value="{{ b.branch_name }}" placeholder="{{ t('branch') }}">
-        <input name="branch_manager_email" value="{{ b.branch_manager_email or '' }}" placeholder="TO — {{ t('employee') }}">
-        <input name="area_manager_email" value="{{ b.area_manager_email or '' }}" placeholder="CC — {{ t('employee') }} 1">
-        <input name="sales_manager_email" value="{{ b.sales_manager_email or '' }}" placeholder="CC — {{ t('employee') }} 2">
-        <input name="owner_email" value="{{ b.owner_email or '' }}" placeholder="{{ t('owner_email') }}">
+        <div class="branch-card-header">
+            <span class="branch-code-badge">{{ b.branch_code }}</span>
+            <strong>{{ b.branch_name }}</strong>
+        </div>
+        <div class="form-grid fields-2">
+            <div class="form-group span-all">
+                <label>{{ t('branch') }}</label>
+                <input name="branch_name" class="field-control" value="{{ b.branch_name }}" placeholder="{{ t('branch') }}">
+            </div>
+            <div class="form-group">
+                <label>{{ t('branch_manager_email') }}</label>
+                <input name="branch_manager_email" type="email" class="field-control" value="{{ b.branch_manager_email or '' }}" placeholder="manager@example.com">
+            </div>
+            <div class="form-group">
+                <label>{{ t('area_manager_email') }}</label>
+                <input name="area_manager_email" type="email" class="field-control" value="{{ b.area_manager_email or '' }}" placeholder="area@example.com">
+            </div>
+            <div class="form-group">
+                <label>{{ t('sales_manager_email') }}</label>
+                <input name="sales_manager_email" type="email" class="field-control" value="{{ b.sales_manager_email or '' }}" placeholder="sales@example.com">
+            </div>
+            <div class="form-group">
+                <label>{{ t('owner_email') }}</label>
+                <input name="owner_email" type="email" class="field-control" value="{{ b.owner_email or '' }}" placeholder="owner@example.com">
+            </div>
+        </div>
         <button type="submit" class="btn btn-sm btn-primary">{{ t('save') }}</button>
     </form>
     {% endfor %}
+    </div>
 </section>
 {% elif tab == 'branding' %}
 <section class="admin-section form-card">

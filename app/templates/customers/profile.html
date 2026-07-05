@@ -14,13 +14,29 @@
 
 <div class="customer-card-layout">
     <aside class="customer-card-sidebar">
-        <section class="panel customer-card-profile">
-            <h2 class="panel-title">{{ t('customer_profile') }}</h2>
-            <div class="customer-profile-grid">
-                <div><span>{{ t('name') }}</span><strong>{{ customer_data.first_name }} {{ customer_data.last_name }}</strong></div>
-                <div><span>{{ t('phone') }}</span><strong>{{ customer_data.phone_number }}</strong></div>
-                <div><span>{{ t('city') }}</span><strong>{{ customer_data.city or '—' }}</strong></div>
-                <div><span>{{ t('region') }}</span><strong>{{ customer_data.region or '—' }}</strong></div>
+        <section class="panel customer-card-profile form-section">
+            <h2 class="section-heading">{{ t('customer_profile') }}</h2>
+            <div class="form-grid fields-3">
+                <div class="form-group">
+                    <label>{{ t('first_name') }}</label>
+                    <div class="field-control field-readonly">{{ customer_data.first_name or '—' }}</div>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('last_name') }}</label>
+                    <div class="field-control field-readonly">{{ customer_data.last_name or '—' }}</div>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('phone') }}</label>
+                    <div class="field-control field-readonly">{{ customer_data.phone_number }}</div>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('city') }}</label>
+                    <div class="field-control field-readonly">{{ customer_data.city or '—' }}</div>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('region') }}</label>
+                    <div class="field-control field-readonly">{{ customer_data.region or '—' }}</div>
+                </div>
             </div>
             <p class="muted-text"><small>🔒 {{ t('customer_encrypted_note') }}</small></p>
         </section>
@@ -38,10 +54,13 @@
             {% endif %}
         </section>
 
-        <section class="panel">
-            <h2 class="panel-title">{{ t('customer_notes') }}</h2>
+        <section class="panel elegant-form">
+            <h2 class="section-heading">{{ t('customer_notes') }}</h2>
             <form method="POST" class="stack-form">
-                <textarea name="note_text" rows="3" required placeholder="{{ t('customer_note_placeholder') }}"></textarea>
+                <div class="form-group">
+                    <label for="note_text">{{ t('add_note') }}</label>
+                    <textarea id="note_text" name="note_text" class="field-control" rows="3" required placeholder="{{ t('customer_note_placeholder') }}"></textarea>
+                </div>
                 <button type="submit" class="btn btn-primary">{{ t('add_note') }}</button>
             </form>
             {% if notes %}

@@ -67,6 +67,7 @@ def create_app(config_class=Config):
             brand=brand,
             primary_color=primary,
             logo_url=logo_url,
+            static_v=app.config.get("STATIC_VERSION", "1"),
             t_status=lambda v: translate_status(v, lang),
             t_type=lambda v: translate_complaint_type(v, lang),
             t_shift=lambda v: translate_shift(v, lang),
@@ -110,9 +111,10 @@ def create_app(config_class=Config):
 
     from app.services.migrate import run_startup_migrations
 
-    try:
-        run_startup_migrations(app)
-    except Exception as exc:
-        app.logger.error("Startup schema migration failed: %s", exc)
+    if os.getenv("SKIP_STARTUP_MIGRATIONS") != "1":
+        try:
+            run_startup_migrations(app)
+        except Exception as exc:
+            app.logger.error("Startup schema migration failed: %s", exc)
 
     return app

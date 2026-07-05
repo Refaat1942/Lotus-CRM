@@ -75,25 +75,51 @@ body {
 
 .login-page {
     min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(145deg, var(--primary-dark) 0%, var(--primary) 50%, #26a69a 100%);
-    padding: 1rem;
+    padding: 1.5rem; position: relative; overflow: hidden;
+    background: var(--primary-dark) url('../img/login-bg.svg') center center / cover no-repeat fixed;
 }
+.login-bg-overlay {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(135deg, rgba(0, 40, 36, 0.72) 0%, rgba(0, 77, 64, 0.55) 50%, rgba(0, 105, 92, 0.65) 100%);
+}
+.login-page .login-card { position: relative; z-index: 1; }
 .login-card {
-    background: white; padding: 2.5rem 2rem; border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.2); width: 100%; max-width: 440px;
+    background: rgba(255, 255, 255, 0.97); padding: 2.75rem 2.25rem; border-radius: 24px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28); width: 100%; max-width: 460px;
+    backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.35);
 }
 .login-header { text-align: center; margin-bottom: 1.75rem; }
-.login-logo { max-height: 120px; max-width: 280px; width: auto; margin-bottom: 1rem; object-fit: contain; }
-.login-logo-fallback { font-size: 4.5rem; display: block; margin-bottom: 0.5rem; }
-.login-header h1 { color: var(--primary-dark); font-size: 1.6rem; }
-.login-form label { display: block; margin: 0.75rem 0 0.3rem; font-weight: 700; font-size: 0.9rem; }
-.login-form input {
-    width: 100%; padding: 0.85rem; border: 2px solid var(--border);
-    border-radius: 10px; font-size: 1rem; font-family: inherit;
+.login-logo-wrap {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 140px; margin-bottom: 0.75rem;
 }
-.login-form input:focus { border-color: var(--primary); outline: none; }
-.login-form button { margin-top: 1.25rem; }
-.lang-switch { text-align: center; margin-top: 1.25rem; font-size: 0.9rem; }
+.login-logo {
+    max-height: 180px; max-width: min(320px, 88vw); width: auto;
+    object-fit: contain; filter: drop-shadow(0 8px 24px rgba(0, 77, 64, 0.18));
+}
+.login-logo-animated {
+    animation: loginLogoPulse 3.2s ease-in-out infinite;
+}
+.login-logo-wrap.logo-missing .login-logo { display: none; }
+.login-logo-wrap.logo-missing::after {
+    content: attr(data-brand); font-size: 2rem; font-weight: 800; color: var(--primary-dark);
+}
+.login-logo-mark {
+    width: 120px; height: 120px; color: var(--primary);
+    animation: loginLogoPulse 3.2s ease-in-out infinite;
+}
+.login-mark-svg { width: 100%; height: 100%; }
+.login-header h1 { color: var(--primary-dark); font-size: 1.75rem; margin-top: 0.25rem; }
+.login-tagline { color: var(--muted); font-size: 0.92rem; margin-top: 0.35rem; line-height: 1.45; }
+@keyframes loginLogoPulse {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 1; }
+    50% { transform: translateY(-8px) scale(1.04); opacity: 0.96; }
+}
+.login-form { margin-top: 0.5rem; }
+.login-form .form-group { margin-bottom: 0.85rem; }
+.login-form label { margin: 0; }
+.login-form button { margin-top: 0.5rem; }
+.lang-switch { text-align: center; margin-top: 1.35rem; font-size: 0.9rem; }
 .lang-switch a { color: var(--primary); font-weight: 600; }
 
 .journey-steps {
@@ -139,14 +165,73 @@ body.lang-en .journey-step { border-right: none; border-left: 4px solid var(--pr
 }
 .filter-bar { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; }
 .filter-bar input, .filter-bar select, .inline-form input, .inline-form select {
-    padding: 0.55rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit;
+    padding: 0.65rem 0.8rem; border: 1.5px solid var(--border); border-radius: 10px; font-family: inherit;
+    min-height: 42px;
 }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
-.form-group { display: flex; flex-direction: column; gap: 0.3rem; }
-.form-group.full-width { grid-column: 1 / -1; }
-.form-group label { font-weight: 700; font-size: 0.9rem; }
-.form-group input, .form-group select, .form-group textarea {
-    padding: 0.65rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit;
+.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.form-group.full-width, .form-group.span-all { grid-column: 1 / -1; }
+.form-group label, .elegant-form label {
+    font-weight: 700; font-size: 0.78rem; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted);
+}
+.form-group input, .form-group select, .form-group textarea,
+.field-control {
+    padding: 0.72rem 0.85rem; border: 1.5px solid var(--border); border-radius: 10px;
+    font-family: inherit; font-size: 0.92rem; background: #fff; width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus,
+.field-control:focus {
+    border-color: var(--primary); outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+.field-readonly, .form-group input[readonly], .form-group input.field-readonly,
+div.field-control.field-readonly {
+    background: linear-gradient(180deg, #f9fbfc, #f3f6f8); color: var(--text); cursor: default;
+    min-height: 42px; display: flex; align-items: center;
+}
+.field-select, .form-group select {
+    appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23607d8b' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: left 0.85rem center;
+    padding-inline-start: 2rem;
+}
+body.lang-en .field-select, body.lang-en .form-group select {
+    background-position: right 0.85rem center; padding-inline-start: 0.85rem; padding-inline-end: 2rem;
+}
+.form-group[hidden], .channel-field[hidden] { display: none !important; }
+.field-hint { font-size: 0.85rem; margin-top: 0.35rem; }
+.form-section {
+    background: linear-gradient(180deg, #fafcfd 0%, #fff 100%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.35rem;
+    margin-bottom: 1.25rem;
+}
+.section-heading {
+    font-size: 0.82rem; font-weight: 800; color: var(--primary-dark);
+    text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 1rem;
+    padding-bottom: 0.5rem; border-bottom: 2px solid color-mix(in srgb, var(--primary) 20%, transparent);
+}
+.form-grid.fields-2 { grid-template-columns: repeat(2, minmax(200px, 1fr)); }
+.form-grid.fields-3 { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+.form-actions { padding-top: 0.5rem; }
+.elegant-form .filter-bar, .filter-bar.elegant-bar {
+    gap: 0.75rem; padding: 1rem 1.25rem;
+}
+.branch-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; }
+.branch-card {
+    background: #fafcfd; border: 1px solid var(--border); border-radius: 14px;
+    padding: 1.15rem; display: flex; flex-direction: column; gap: 0.85rem;
+}
+.branch-card-header { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
+.branch-code-badge {
+    background: var(--primary); color: white; font-size: 0.75rem; font-weight: 800;
+    padding: 0.2rem 0.55rem; border-radius: 6px; letter-spacing: 0.03em;
+}
+.stack-form .form-group { margin-bottom: 0.65rem; }
+.stack-form select, .stack-form textarea, .stack-form input:not([type=hidden]) {
+    width: 100%; padding: 0.65rem 0.8rem; border: 1.5px solid var(--border);
+    border-radius: 10px; font-family: inherit;
 }
 .input-group { display: flex; gap: 0.5rem; }
 .input-group input { flex: 1; }
@@ -194,7 +279,7 @@ body.lang-en .journey-step { border-right: none; border-left: 4px solid var(--pr
 
 @media (max-width: 768px) {
     .feature-grid { grid-template-columns: 1fr 1fr; }
-    .login-logo { max-height: 90px; }
+    .login-logo { max-height: 140px; }
     .sidebar { width: 100%; height: auto; position: relative; }
     .app-shell { flex-direction: column; }
     .main-area { margin-left: 0 !important; margin-right: 0 !important; }
@@ -377,7 +462,9 @@ body.lang-en .notif-urgent a { border-right: none; border-left: 3px solid var(--
 @media (max-width: 768px) {
     .complaint-customer-grid { grid-template-columns: 1fr; }
     .complaint-fields-grid { grid-template-columns: 1fr; }
+    .form-grid.fields-2, .form-grid.fields-3 { grid-template-columns: 1fr; }
     .type-add-grid { grid-template-columns: 1fr; }
+    .branch-cards { grid-template-columns: 1fr; }
 }
 .customer-info-box {
     min-height: 110px; padding: 0.75rem; border-radius: 8px;

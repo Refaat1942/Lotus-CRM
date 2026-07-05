@@ -203,6 +203,7 @@ def _dedupe_menu_functions():
 
 
 def init_db():
+    os.environ["SKIP_STARTUP_MIGRATIONS"] = "1"
     app = create_app()
     with app.app_context():
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)

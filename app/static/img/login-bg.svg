@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#003d36"/>
+      <stop offset="45%" stop-color="#00695c"/>
+      <stop offset="100%" stop-color="#00897b"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="20%" cy="25%" r="45%">
+      <stop offset="0%" stop-color="#4db6ac" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#004d40" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="85%" cy="75%" r="50%">
+      <stop offset="0%" stop-color="#80cbc4" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#004d40" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <rect width="1920" height="1080" fill="url(#glow1)"/>
+  <rect width="1920" height="1080" fill="url(#glow2)"/>
+  <rect width="1920" height="1080" fill="url(#grid)"/>
+  <!-- Headset / call center motif -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2">
+    <ellipse cx="320" cy="820" rx="140" ry="48"/>
+    <path d="M180 820v-40a140 140 0 0 1 280 0v40"/>
+    <rect x="150" y="800" width="36" height="72" rx="14"/>
+    <rect x="454" y="800" width="36" height="72" rx="14"/>
+  </g>
+  <!-- Complaint ticket motif -->
+  <g transform="translate(1480 180)" fill="#ffffff" fill-opacity="0.06">
+    <rect x="0" y="0" width="220" height="280" rx="18"/>
+    <rect x="28" y="36" width="120" height="12" rx="6"/>
+    <rect x="28" y="68" width="164" height="10" rx="5"/>
+    <rect x="28" y="92" width="140" height="10" rx="5"/>
+    <rect x="28" y="140" width="164" height="10" rx="5"/>
+    <rect x="28" y="164" width="110" height="10" rx="5"/>
+  </g>
+  <!-- Customer profile motif -->
+  <g transform="translate(200 160)" fill="#ffffff" fill-opacity="0.06">
+    <circle cx="70" cy="56" r="36"/>
+    <path d="M10 170c8-44 40-66 60-66s52 22 60 66"/>
+  </g>
+  <!-- Lotus petal motif -->
+  <g transform="translate(960 540)" fill="#ffffff" fill-opacity="0.05">
+    <ellipse cx="0" cy="-40" rx="28" ry="52" transform="rotate(0)"/>
+    <ellipse cx="0" cy="-40" rx="28" ry="52" transform="rotate(72)"/>
+    <ellipse cx="0" cy="-40" rx="28" ry="52" transform="rotate(144)"/>
+    <ellipse cx="0" cy="-40" rx="28" ry="52" transform="rotate(216)"/>
+    <ellipse cx="0" cy="-40" rx="28" ry="52" transform="rotate(288)"/>
+    <circle cx="0" cy="0" r="18" fill="#80cbc4" fill-opacity="0.12"/>
+  </g>
+</svg>

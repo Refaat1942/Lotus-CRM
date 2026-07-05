@@ -298,6 +298,10 @@ TRANSLATIONS = {
         "escalated": "مُصعّدة",
         "escalated_only": "المُصعّدة فقط",
         "serial_format_hint": "رقم التسلسل يتضمن كود الفرع — مثال: ALX-20260705-0001",
+        "branch_manager_email": "بريد مدير الفرع",
+        "area_manager_email": "بريد مدير المنطقة",
+        "sales_manager_email": "بريد مدير المبيعات",
+        "no_types_for_category": "لا توجد أنواع لهذا التصنيف — راجع الإعدادات",
     },
     "en": {
         "app_name": "Lotus CRM",
@@ -598,6 +602,10 @@ TRANSLATIONS = {
         "escalated": "Escalated",
         "escalated_only": "Escalated only",
         "serial_format_hint": "Serial includes branch code — e.g. ALX-20260705-0001",
+        "branch_manager_email": "Branch manager email",
+        "area_manager_email": "Area manager email",
+        "sales_manager_email": "Sales manager email",
+        "no_types_for_category": "No types for this category — check Admin settings",
     },
 }
 

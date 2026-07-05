@@ -310,8 +310,8 @@ def template_branches():
     wb = Workbook()
     ws = wb.active
     ws.title = "Branches"
-    ws.append(["branch_code", "branch_name", "branch_manager_email", "area_manager_email", "sales_manager_email"])
-    ws.append(["B001", "Lotus Maadi", "manager@example.com", "area@example.com", "sales@example.com"])
+    ws.append(["branch_code", "branch_name", "branch_manager_email", "area_manager_email", "sales_manager_email", "owner_email"])
+    ws.append(["B001", "Lotus Maadi", "manager@example.com", "area@example.com", "sales@example.com", "owner@example.com"])
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
@@ -358,6 +358,7 @@ def import_branches():
         branch.branch_manager_email = str(row[2] or "").strip() if len(row) > 2 else ""
         branch.area_manager_email = str(row[3] or "").strip() if len(row) > 3 else ""
         branch.sales_manager_email = str(row[4] or "").strip() if len(row) > 4 else ""
+        branch.owner_email = str(row[5] or "").strip() if len(row) > 5 else ""
         db.session.add(branch)
         count += 1
     db.session.commit()

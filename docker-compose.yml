@@ -26,6 +26,7 @@ services:
       APP_PORT: "16350"
       DEFAULT_LANGUAGE: ${DEFAULT_LANGUAGE:-ar}
       BACKUP_DIR: /backups
+      SKIP_STARTUP_MIGRATIONS: "1"
     depends_on:
       db:
         condition: service_healthy
@@ -34,7 +35,7 @@ services:
       - ./app/static/uploads:/app/app/static/uploads
     command: >
       sh -c "python scripts/init_db.py &&
-             gunicorn --bind 0.0.0.0:16350 --workers 2 --timeout 120 run:app"
+             exec gunicorn --bind 0.0.0.0:16350 --workers 2 --timeout 120 --preload run:app"
 
   backup:
     image: postgres:16-alpine

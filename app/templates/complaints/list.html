@@ -2,7 +2,7 @@
 {% block title %}{{ t('view_complaints') }} - {{ brand }}{% endblock %}
 {% block content %}
 <h1 class="page-title">📋 {{ t('view_complaints') }}</h1>
-<div class="filter-bar form-card">
+<div class="filter-bar form-card elegant-form">
     <input type="date" id="from"><input type="date" id="to">
     <select id="status"><option value="الكل">{{ t('all_statuses') }}</option>
         {% for s in statuses %}<option value="{{ s }}">{{ t_status(s) }}</option>{% endfor %}

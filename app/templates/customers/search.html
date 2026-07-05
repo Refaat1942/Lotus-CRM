@@ -3,8 +3,8 @@
 {% block content %}
 <h1 class="page-title">🔍 {{ t('search_customer') }}</h1>
 
-<form method="GET" class="filter-bar form-card customer-search-bar">
-    <input type="text" name="q" id="search-q" value="{{ query }}" placeholder="{{ t('search_customer_placeholder') }}" autocomplete="off">
+<form method="GET" class="filter-bar form-card elegant-form customer-search-bar">
+    <input type="text" name="q" id="search-q" class="field-control" value="{{ query }}" placeholder="{{ t('search_customer_placeholder') }}" autocomplete="off">
     <button type="submit" class="btn btn-primary">{{ t('search') }}</button>
     <a href="{{ url_for('customers.add', phone=query) }}" class="btn btn-secondary">{{ t('add_customer') }}</a>
 </form>

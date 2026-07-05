@@ -47,50 +47,65 @@
         <div class="text-box">{{ complaint.complaint_text }}</div>
     </section>
 
-    <section class="panel">
-        <h2 class="panel-title">{{ t('assign_complaint') }}</h2>
+    <section class="panel elegant-form">
+        <h2 class="section-heading">{{ t('assign_complaint') }}</h2>
         <form method="POST" class="stack-form">
             <input type="hidden" name="action" value="assign">
-            <select name="assigned_to_code">
+            <div class="form-group">
+                <label for="assigned_to_code">{{ t('assigned_agent') }}</label>
+                <select id="assigned_to_code" name="assigned_to_code" class="field-control field-select">
                 <option value="">{{ t('unassigned') }}</option>
                 {% for e in agents %}
                 <option value="{{ e.employee_code }}" {{ 'selected' if complaint.assigned_to_code == e.employee_code else '' }}>
                     {{ e.employee_code }} — {{ e.employee_name }}
                 </option>
                 {% endfor %}
-            </select>
+                </select>
+            </div>
             <button type="submit" class="btn btn-secondary">{{ t('assign_agent') }}</button>
         </form>
-        <h2 class="panel-title">{{ t('urgency') }}</h2>
+        <h2 class="section-heading">{{ t('urgency') }}</h2>
         <form method="POST" class="stack-form">
             <input type="hidden" name="action" value="urgency">
-            <select name="urgency">
+            <div class="form-group">
+                <label for="urgency_sel">{{ t('urgency') }}</label>
+                <select id="urgency_sel" name="urgency" class="field-control field-select">
                 {% for u in urgencies %}
                 <option value="{{ u }}" {{ 'selected' if (complaint.urgency or 'متوسطة')==u else '' }}>{{ t_urgency(u) }}</option>
                 {% endfor %}
-            </select>
+                </select>
+            </div>
             <button type="submit" class="btn btn-secondary">{{ t('save') }}</button>
         </form>
-        <h2 class="panel-title">{{ t('update_status') }}</h2>
+        <h2 class="section-heading">{{ t('update_status') }}</h2>
         <form method="POST" class="stack-form">
             <input type="hidden" name="action" value="status">
-            <select name="status">
+            <div class="form-group">
+                <label for="status_sel">{{ t('status') }}</label>
+                <select id="status_sel" name="status" class="field-control field-select">
                 {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==complaint.complaint_status else '' }}>{{ t_status(s) }}</option>{% endfor %}
-            </select>
+                </select>
+            </div>
             <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
         </form>
         {% if not complaint.is_escalated %}
-        <h2 class="panel-title">{{ t('escalate_complaint') }}</h2>
+        <h2 class="section-heading">{{ t('escalate_complaint') }}</h2>
         <form method="POST" class="stack-form escalation-form">
             <input type="hidden" name="action" value="escalate">
-            <textarea name="escalation_reason" rows="3" placeholder="{{ t('escalation_reason_placeholder') }}"></textarea>
+            <div class="form-group">
+                <label for="escalation_reason">{{ t('escalation_reason_placeholder') }}</label>
+                <textarea id="escalation_reason" name="escalation_reason" class="field-control" rows="3" placeholder="{{ t('escalation_reason_placeholder') }}"></textarea>
+            </div>
             <button type="submit" class="btn btn-warning" onclick="return confirm('{{ t('escalate_confirm') }}')">⬆ {{ t('escalate_to_management') }}</button>
         </form>
         {% endif %}
-        <h2 class="panel-title">{{ t('add_note') }}</h2>
+        <h2 class="section-heading">{{ t('add_note') }}</h2>
         <form method="POST" class="stack-form">
             <input type="hidden" name="action" value="note">
-            <textarea name="detail_text" rows="4" required placeholder="{{ t('note_text') }}"></textarea>
+            <div class="form-group">
+                <label for="detail_text">{{ t('note_text') }}</label>
+                <textarea id="detail_text" name="detail_text" class="field-control" rows="4" required placeholder="{{ t('note_text') }}"></textarea>
+            </div>
             <button type="submit" class="btn btn-secondary">{{ t('save') }}</button>
         </form>
     </section>

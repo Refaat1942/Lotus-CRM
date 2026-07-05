@@ -9,124 +9,138 @@
     <a href="{{ url_for('customers.search') }}" class="btn btn-secondary">{{ t('search_customer') }}</a>
 </div>
 
-<form method="POST" class="form-card complaint-form">
+<form method="POST" class="form-card complaint-form elegant-form">
     <div class="form-steps-hint">{{ t('step2') }}: {{ t('record_complaint') }}</div>
 
-    <section class="complaint-section">
-        <h3 class="complaint-section-title">{{ t('customer') }}</h3>
-        <div class="form-grid complaint-fields-grid">
-            <div class="form-group">
+    <section class="form-section complaint-section">
+        <h3 class="section-heading">{{ t('customer') }}</h3>
+        <div class="form-grid fields-3">
+            <div class="form-group span-all">
                 <label for="phone">{{ t('phone') }}</label>
                 <div class="input-group">
-                    <input type="text" name="phone" id="phone" value="{{ prefill_phone }}" required>
+                    <input type="text" name="phone" id="phone" class="field-control" value="{{ prefill_phone }}" required placeholder="{{ t('phone') }}">
                     <button type="button" class="btn btn-secondary" onclick="lookupCustomer()">{{ t('search') }}</button>
                 </div>
             </div>
             <div class="form-group">
-                <label for="customer_name">{{ t('name') }}</label>
-                <input type="text" id="customer_name" readonly placeholder="—">
+                <label for="customer_first_name">{{ t('first_name') }}</label>
+                <input type="text" id="customer_first_name" class="field-control field-readonly" readonly placeholder="—">
             </div>
             <div class="form-group">
-                <label for="customer_phone_display">{{ t('phone') }} ({{ t('customer_profile') }})</label>
-                <input type="text" id="customer_phone_display" readonly placeholder="—">
+                <label for="customer_last_name">{{ t('last_name') }}</label>
+                <input type="text" id="customer_last_name" class="field-control field-readonly" readonly placeholder="—">
+            </div>
+            <div class="form-group">
+                <label for="customer_phone_display">{{ t('phone') }}</label>
+                <input type="text" id="customer_phone_display" class="field-control field-readonly" readonly placeholder="—">
             </div>
             <div class="form-group">
                 <label for="customer_city">{{ t('city') }}</label>
-                <input type="text" id="customer_city" readonly placeholder="—">
+                <input type="text" id="customer_city" class="field-control field-readonly" readonly placeholder="—">
             </div>
             <div class="form-group">
                 <label for="customer_region">{{ t('region') }}</label>
-                <input type="text" id="customer_region" readonly placeholder="—">
+                <input type="text" id="customer_region" class="field-control field-readonly" readonly placeholder="—">
+            </div>
+            <div class="form-group">
+                <label for="branch_code">{{ t('branch') }}</label>
+                <select name="branch_code" id="branch_code" class="field-control field-select" required>
+                    {% for b in branches %}
+                    <option value="{{ b.branch_code }}" {{ 'selected' if default_branch==b.branch_code else '' }}>{{ b.branch_name }} ({{ b.branch_code }})</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
-        <p id="customer-status" class="hint muted-text">{{ t('search_customer_hint') }}</p>
+        <p id="customer-status" class="field-hint muted-text">{{ t('search_customer_hint') }}</p>
     </section>
 
-    <section class="complaint-section">
-        <h3 class="complaint-section-title">{{ t('complaint_details') }}</h3>
-        <div class="form-grid complaint-fields-grid">
+    <section class="form-section complaint-section">
+        <h3 class="section-heading">{{ t('complaint_details') }}</h3>
+        <div class="form-grid fields-3">
             <div class="form-group">
                 <label for="complaint_category">{{ t('complaint_category') }}</label>
-                <select name="complaint_category" id="complaint_category" required onchange="onCategoryChange()">
+                <select name="complaint_category" id="complaint_category" class="field-control field-select" required onchange="onCategoryChange()">
                     {% for key, label_key in categories %}
-                    <option value="{{ key }}">{{ t(label_key) }}</option>
+                    <option value="{{ key }}" {{ 'selected' if key=='delivery' else '' }}>{{ t(label_key) }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
                 <label for="complaint_type">{{ t('complaint_type') }}</label>
-                <select name="complaint_type" id="complaint_type" required></select>
-            </div>
-            <div class="form-group">
-                <label for="branch_code">{{ t('branch') }}</label>
-                <select name="branch_code" id="branch_code" required>
-                    {% for b in branches %}
-                    <option value="{{ b.branch_code }}" {{ 'selected' if default_branch==b.branch_code else '' }}>{{ b.branch_name }}</option>
-                    {% endfor %}
-                </select>
+                <select name="complaint_type" id="complaint_type" class="field-control field-select" required></select>
             </div>
             <div class="form-group">
                 <label for="urgency">{{ t('urgency') }}</label>
-                <select name="urgency" id="urgency" required>
+                <select name="urgency" id="urgency" class="field-control field-select" required>
                     {% for u in urgencies %}
                     <option value="{{ u }}" {{ 'selected' if u=='متوسطة' else '' }}>{{ t_urgency(u) }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-group" id="digital-group" hidden>
+            <div class="form-group channel-field" id="digital-group" hidden>
                 <label for="digital_channel">{{ t('digital_platform') }}</label>
-                <select name="channel_detail" id="digital_channel">
+                <select name="channel_detail" id="digital_channel" class="field-control field-select">
                     {% for p in digital_platforms %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
                 </select>
             </div>
-            <div class="form-group" id="online-group" hidden>
+            <div class="form-group channel-field" id="online-group" hidden>
                 <label for="online_channel">{{ t('online_source') }}</label>
-                <select name="channel_detail" id="online_channel">
+                <select name="channel_detail" id="online_channel" class="field-control field-select">
                     {% for s in online_sources %}<option value="{{ s }}">{{ t('online_' ~ s|lower) }}</option>{% endfor %}
                 </select>
             </div>
-            <div class="form-group full-width">
+            <div class="form-group span-all">
                 <label for="complaint_text">{{ t('complaint_text') }}</label>
-                <textarea name="complaint_text" id="complaint_text" rows="5" required></textarea>
+                <textarea name="complaint_text" id="complaint_text" class="field-control" rows="5" required placeholder="{{ t('complaint_text') }}"></textarea>
             </div>
         </div>
     </section>
 
-    <button type="submit" class="btn btn-primary btn-lg">💾 {{ t('save') }}</button>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-lg">💾 {{ t('save') }}</button>
+    </div>
 </form>
 {% endblock %}
 {% block extra_js %}
 <script>
 const TYPES_BY_CATEGORY = {{ types_by_category|tojson }};
+const NO_TYPES_LABEL = {{ t('no_types_for_category')|tojson }};
 
 function onCategoryChange() {
     const cat = document.getElementById('complaint_category').value;
     const typeSel = document.getElementById('complaint_type');
     const types = TYPES_BY_CATEGORY[cat] || [];
-    typeSel.innerHTML = types.map(t => `<option value="${t.value}">${t.label}</option>`).join('');
-    document.getElementById('digital-group').hidden = cat !== 'digital';
-    document.getElementById('online-group').hidden = cat !== 'online';
-    document.getElementById('digital_channel').disabled = cat !== 'digital';
-    document.getElementById('online_channel').disabled = cat !== 'online';
+    if (types.length) {
+        typeSel.innerHTML = types.map(t => `<option value="${t.value}">${t.label}</option>`).join('');
+        typeSel.disabled = false;
+    } else {
+        typeSel.innerHTML = `<option value="">${NO_TYPES_LABEL}</option>`;
+        typeSel.disabled = true;
+    }
+    const isDigital = cat === 'digital';
+    const isOnline = cat === 'online';
+    document.getElementById('digital-group').hidden = !isDigital;
+    document.getElementById('online-group').hidden = !isOnline;
+    document.getElementById('digital_channel').disabled = !isDigital;
+    document.getElementById('online_channel').disabled = !isOnline;
 }
 
 function fillCustomer(data) {
     const status = document.getElementById('customer-status');
+    const fields = ['customer_first_name', 'customer_last_name', 'customer_phone_display', 'customer_city', 'customer_region'];
     if (!data.found) {
-        document.getElementById('customer_name').value = '';
-        document.getElementById('customer_phone_display').value = '';
-        document.getElementById('customer_city').value = '';
-        document.getElementById('customer_region').value = '';
+        fields.forEach(id => document.getElementById(id).value = '');
         status.textContent = '{{ t("customer_not_found") }}';
-        status.className = 'hint error-text';
+        status.className = 'field-hint error-text';
         return;
     }
-    document.getElementById('customer_name').value = data.name || '—';
+    document.getElementById('customer_first_name').value = data.first_name || '—';
+    document.getElementById('customer_last_name').value = data.last_name || '—';
     document.getElementById('customer_phone_display').value = data.phone_raw || data.phone || '—';
     document.getElementById('customer_city').value = data.city || '—';
     document.getElementById('customer_region').value = data.region || '—';
     status.textContent = '{{ t("customer_found") }}';
-    status.className = 'hint success-text';
+    status.className = 'field-hint success-text';
 }
 
 async function lookupCustomer() {
