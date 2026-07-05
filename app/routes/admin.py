@@ -78,7 +78,7 @@ def index():
             row.function_id: row.is_visible
             for row in UserFunctionAccess.query.filter_by(user_id=u.id).all()
         }
-    employees = Employee.query.filter_by(is_active=True).order_by(Employee.employee_name).all()
+    employees = Employee.query.order_by(Employee.employee_name).all()
     branches = Branch.query.order_by(Branch.branch_name).all()
     complaint_types = ComplaintType.query.order_by(ComplaintType.sort_order).all()
     lang = session.get("lang", "ar")
@@ -120,6 +120,34 @@ def add_user():
 
     user = User(username=username, role=role)
     user.set_password(password)
+
+    emp_code = request.form.get("employee_code", "").strip()
+    emp_name = request.form.get("employee_name", "").strip() or username
+    branch_code = request.form.get("branch_code", "").strip() or None
+    if not emp_code:
+        base = "E" + "".join(ch for ch in username.upper() if ch.isalnum())[:12]
+        emp_code = base or f"E{User.query.count() + 1}"
+        suffix = 1
+        while Employee.query.get(emp_code):
+            emp_code = f"{base}{suffix}"
+            suffix += 1
+
+    emp = Employee.query.get(emp_code)
+    if not emp:
+        emp = Employee(
+            employee_code=emp_code,
+            employee_name=emp_name,
+            branch_code=branch_code,
+            is_active=True,
+        )
+        db.session.add(emp)
+    else:
+        emp.employee_name = emp_name
+        if branch_code:
+            emp.branch_code = branch_code
+        emp.is_active = True
+
+    user.employee_code = emp_code
     db.session.add(user)
     db.session.flush()
 
@@ -128,7 +156,46 @@ def add_user():
     apply_role_features(user, role)
     db.session.commit()
     flash("user_created", "success")
-    return redirect(url_for("admin.index"))
+    return redirect(url_for("admin.index", tab="agents"))
+
+
+@admin_bp.route("/employees/add", methods=["POST"])
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def add_employee():
+    code = request.form.get("employee_code", "").strip()
+    name = request.form.get("employee_name", "").strip()
+    branch_code = request.form.get("branch_code", "").strip() or None
+    if not code or not name:
+        flash("required_fields", "error")
+        return redirect(url_for("admin.index", tab="employees"))
+    if Employee.query.get(code):
+        flash("employee_code_exists", "error")
+        return redirect(url_for("admin.index", tab="employees"))
+    db.session.add(
+        Employee(
+            employee_code=code,
+            employee_name=name,
+            branch_code=branch_code,
+            is_active=True,
+        )
+    )
+    db.session.commit()
+    flash("employee_saved", "success")
+    return redirect(url_for("admin.index", tab="employees"))
+
+
+@admin_bp.route("/employees/<code>/toggle", methods=["POST"])
+@login_required
+@feature_required("admin.index")
+@permission_required("can_manage_users")
+def toggle_employee(code):
+    emp = Employee.query.get_or_404(code)
+    emp.is_active = not emp.is_active
+    db.session.commit()
+    flash("updated", "success")
+    return redirect(url_for("admin.index", tab="employees"))
 
 
 @admin_bp.route("/users/<int:user_id>/delete", methods=["POST"])
@@ -389,7 +456,7 @@ def import_employees():
         db.session.add(emp)
     db.session.commit()
     flash("import_success", "success")
-    return redirect(url_for("admin.index", tab="import"))
+    return redirect(url_for("admin.index", tab="employees"))
 
 
 @admin_bp.route("/import/customers/preview", methods=["POST"])

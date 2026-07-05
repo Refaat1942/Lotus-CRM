@@ -16,7 +16,8 @@ def send_escalation_notification(branch_code, serial, details):
     return _send_escalation_via_smtp(branch_code, serial, details)
 
 
-def _get_upper_management_emails(branch_code):
+def get_escalation_recipient_emails(branch_code):
+    """Emails notified when a complaint is escalated (upper management)."""
     branch = Branch.query.get(branch_code)
     if not branch:
         return []
@@ -29,6 +30,29 @@ def _get_upper_management_emails(branch_code):
         ]
         if e
     ]
+
+
+def get_escalation_recipient_rows(branch_code, lang="ar"):
+    """Labeled escalation recipients for display in the UI."""
+    branch = Branch.query.get(branch_code)
+    if not branch:
+        return []
+    from app.services.i18n import translate
+
+    mapping = [
+        ("area_manager_email", branch.area_manager_email),
+        ("sales_manager_email", branch.sales_manager_email),
+        ("owner_email", branch.owner_email),
+    ]
+    rows = []
+    for key, email in mapping:
+        if email:
+            rows.append({"label": translate(key, lang), "email": email})
+    return rows
+
+
+def _get_upper_management_emails(branch_code):
+    return get_escalation_recipient_emails(branch_code)
 
 
 def _send_escalation_via_smtp(branch_code, serial, details):

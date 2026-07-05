@@ -40,7 +40,35 @@
             <dt>{{ t('date') }}</dt><dd>{{ complaint.complaint_date.strftime('%Y-%m-%d %H:%M') }}</dd>
             {% if complaint.is_escalated %}
             <dt>{{ t('escalated') }}</dt>
-            <dd>{{ complaint.escalated_by or '—' }} · {{ complaint.escalated_at.strftime('%Y-%m-%d %H:%M') if complaint.escalated_at else '' }}{% if complaint.escalation_reason %}<br><em>{{ complaint.escalation_reason }}</em>{% endif %}</dd>
+            <dd>
+                <div class="escalation-info">
+                    <p><strong>{{ t('escalation_sent_by') }}:</strong> {{ complaint.escalated_by or '—' }} · {{ complaint.escalated_at.strftime('%Y-%m-%d %H:%M') if complaint.escalated_at else '' }}</p>
+                    <p><strong>{{ t('escalation_sent_to') }}:</strong></p>
+                    {% if escalation_emails %}
+                    <ul class="escalation-recipient-list">
+                        {% for email in escalation_emails %}
+                        <li>{{ email }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="muted-text">{{ t('escalation_no_emails') }}</p>
+                    {% endif %}
+                    {% if complaint.escalation_reason %}<p><em>{{ complaint.escalation_reason }}</em></p>{% endif %}
+                </div>
+            </dd>
+            {% else %}
+            <dt>{{ t('escalation_will_go_to') }}</dt>
+            <dd>
+                {% if escalation_recipients %}
+                <ul class="escalation-recipient-list muted-list">
+                    {% for row in escalation_recipients %}
+                    <li><span>{{ row.label }}</span> {{ row.email }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <span class="muted-text">{{ t('escalation_no_emails') }}</span>
+                {% endif %}
+            </dd>
             {% endif %}
         </dl>
         <h3 class="panel-sub">{{ t('complaint_text') }}</h3>

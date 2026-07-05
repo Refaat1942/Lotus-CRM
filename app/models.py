@@ -100,8 +100,7 @@ class Employee(db.Model):
     branch_code = db.Column(db.String(20), db.ForeignKey("branches.branch_code"), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
 
-
-class Customer(db.Model):
+    branch = db.relationship("Branch")
     __tablename__ = "customers"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -158,6 +157,7 @@ class Complaint(db.Model):
     escalated_at = db.Column(db.DateTime)
     escalated_by = db.Column(db.String(120))
     escalation_reason = db.Column(db.Text)
+    escalation_recipients = db.Column(db.String(500))
 
     branch = db.relationship("Branch")
     details = db.relationship(

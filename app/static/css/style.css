@@ -219,14 +219,51 @@ body.lang-en .field-select, body.lang-en .form-group select {
     gap: 0.75rem; padding: 1rem 1.25rem;
 }
 .branch-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; }
-.branch-card {
-    background: #fafcfd; border: 1px solid var(--border); border-radius: 14px;
-    padding: 1.15rem; display: flex; flex-direction: column; gap: 0.85rem;
+.branch-emails-panel { overflow: hidden; }
+.branch-emails-legend {
+    display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;
+    padding: 0.85rem 1rem; background: #f4f8f9; border-radius: 12px; border: 1px solid var(--border);
 }
-.branch-card-header { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
+.legend-item { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.85rem; }
+.legend-item strong { color: var(--primary-dark); font-size: 0.78rem; text-transform: uppercase; }
+.legend-to { border-inline-start: 3px solid var(--primary); padding-inline-start: 0.65rem; }
+.legend-cc { border-inline-start: 3px solid #e67e22; padding-inline-start: 0.65rem; }
+.branch-email-row {
+    border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.15rem;
+    margin-bottom: 1rem; background: #fafcfd;
+}
+.branch-email-head {
+    display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.85rem; flex-wrap: wrap;
+}
+.branch-name-input { max-width: 320px; font-weight: 700; }
 .branch-code-badge {
     background: var(--primary); color: white; font-size: 0.75rem; font-weight: 800;
-    padding: 0.2rem 0.55rem; border-radius: 6px; letter-spacing: 0.03em;
+    padding: 0.2rem 0.55rem; border-radius: 6px; letter-spacing: 0.03em; flex-shrink: 0;
+}
+.branch-email-fields {
+    display: grid; grid-template-columns: 1.2fr repeat(3, 1fr) auto; gap: 0.75rem; align-items: end;
+}
+.email-field-group { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.email-field-group label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+.email-field-tag {
+    display: inline-block; width: fit-content; font-size: 0.68rem; font-weight: 800;
+    padding: 0.1rem 0.45rem; border-radius: 4px; margin-bottom: 0.1rem;
+}
+.email-to-group .email-field-tag { background: #e0f2f1; color: var(--primary-dark); }
+.email-cc-group .email-field-tag { background: #fff3e0; color: #e65100; }
+.email-field-action { display: flex; align-items: flex-end; }
+.escalation-info p { margin: 0 0 0.35rem; }
+.escalation-recipient-list { margin: 0.25rem 0 0; padding-inline-start: 1.1rem; }
+.escalation-recipient-list li { margin-bottom: 0.2rem; }
+.escalation-recipient-list span { color: var(--muted); font-size: 0.82rem; margin-inline-end: 0.35rem; }
+.muted-list li { color: var(--text); }
+.row-inactive { opacity: 0.65; }
+@media (max-width: 1100px) {
+    .branch-email-fields { grid-template-columns: 1fr 1fr; }
+    .email-field-action { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+    .branch-email-fields { grid-template-columns: 1fr; }
 }
 .stack-form .form-group { margin-bottom: 0.65rem; }
 .stack-form select, .stack-form textarea, .stack-form input:not([type=hidden]) {

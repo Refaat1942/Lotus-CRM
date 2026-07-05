@@ -107,6 +107,7 @@ def migrate_schema():
                 "ALTER TABLE complaints ADD COLUMN IF NOT EXISTS escalated_at TIMESTAMP",
                 "ALTER TABLE complaints ADD COLUMN IF NOT EXISTS escalated_by VARCHAR(120)",
                 "ALTER TABLE complaints ADD COLUMN IF NOT EXISTS escalation_reason TEXT",
+                "ALTER TABLE complaints ADD COLUMN IF NOT EXISTS escalation_recipients VARCHAR(500)",
                 "CREATE INDEX IF NOT EXISTS ix_complaints_is_escalated ON complaints (is_escalated)",
             ]
         )

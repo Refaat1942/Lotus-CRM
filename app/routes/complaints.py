@@ -7,7 +7,12 @@ from app.decorators import feature_required
 from app.extensions import db
 from app.models import Branch, Complaint, ComplaintDetail, ComplaintType, Customer, Employee
 from app.services.audit import log_action
-from app.services.email import send_complaint_notification, send_escalation_notification
+from app.services.email import (
+    get_escalation_recipient_emails,
+    get_escalation_recipient_rows,
+    send_complaint_notification,
+    send_escalation_notification,
+)
 from app.services.complaints import (
     build_dashboard_overview,
     complaint_display_number,
@@ -383,10 +388,14 @@ def complaint_detail(complaint_id):
             complaint.escalation_reason = reason or None
             complaint.last_modified = datetime.utcnow()
             serial = complaint_display_number(complaint)
+            recipients = get_escalation_recipient_emails(complaint.branch_code)
+            complaint.escalation_recipients = ", ".join(recipients) if recipients else None
+            recipient_note = ", ".join(recipients) if recipients else "—"
             _add_timeline(
                 complaint_id,
                 modifier,
-                f"Escalated to upper management" + (f": {reason}" if reason else ""),
+                f"Escalated to upper management ({recipient_note})"
+                + (f": {reason}" if reason else ""),
                 "escalate",
             )
             log_action("complaint.escalate", "complaint", complaint_id, reason[:200] if reason else "")
@@ -399,6 +408,8 @@ def complaint_detail(complaint_id):
                 send_escalation_notification(complaint.branch_code, serial, body)
             except Exception:
                 flash("email_failed", "warning")
+            if not recipients:
+                flash("escalation_no_emails", "warning")
         db.session.commit()
         flash("updated", "success")
         return redirect(url_for("complaints.complaint_detail", complaint_id=complaint_id))
@@ -409,6 +420,15 @@ def complaint_detail(complaint_id):
     type_display = ct.display_name(lang) if ct else complaint.complaint_type
     cat_label = translate(category_label_key(complaint.complaint_category or "delivery"), lang)
     summary = build_complaint_summary(complaint, customer_data, lang)
+    if complaint.is_escalated:
+        if complaint.escalation_recipients:
+            escalation_emails = [e.strip() for e in complaint.escalation_recipients.split(",") if e.strip()]
+        else:
+            escalation_emails = get_escalation_recipient_emails(complaint.branch_code)
+        escalation_recipients = get_escalation_recipient_rows(complaint.branch_code, lang)
+    else:
+        escalation_emails = []
+        escalation_recipients = get_escalation_recipient_rows(complaint.branch_code, lang)
     timeline = (
         ComplaintDetail.query.filter_by(complaint_id=complaint_id)
         .order_by(ComplaintDetail.detail_date.desc())
@@ -420,6 +440,8 @@ def complaint_detail(complaint_id):
         customer=customer_data,
         category_label=cat_label,
         summary=summary,
+        escalation_emails=escalation_emails,
+        escalation_recipients=escalation_recipients,
         timeline=timeline,
         type_display=type_display,
         statuses=STATUSES,

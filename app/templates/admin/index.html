@@ -5,6 +5,7 @@
 
 <div class="admin-tabs-nav">
     <a href="?tab=agents" class="{{ 'active' if request.args.get('tab')=='agents' else '' }}">{{ t('user_management') }}</a>
+    <a href="?tab=employees" class="{{ 'active' if request.args.get('tab')=='employees' else '' }}">{{ t('manage_agents') }}</a>
     <a href="?tab=types" class="{{ 'active' if request.args.get('tab')=='types' else '' }}">{{ t('complaint_types') }}</a>
     <a href="?tab=sla" class="{{ 'active' if request.args.get('tab')=='sla' else '' }}">{{ t('sla_settings') }}</a>
     <a href="?tab=branches" class="{{ 'active' if request.args.get('tab')=='branches' else '' }}">{{ t('branch_emails') }}</a>
@@ -20,21 +21,39 @@
 <div class="users-admin">
     <section class="panel users-add-panel">
         <h3 class="users-section-title">{{ t('add_user') }}</h3>
-        <form method="POST" action="{{ url_for('admin.add_user') }}" class="users-add-form">
+        <p class="subtitle muted-text">{{ t('agents_assign_hint') }}</p>
+        <form method="POST" action="{{ url_for('admin.add_user') }}" class="users-add-form elegant-form">
             <div class="form-group">
                 <label for="new-username">{{ t('username') }}</label>
-                <input id="new-username" name="username" required autocomplete="off">
+                <input id="new-username" name="username" class="field-control" required autocomplete="off">
             </div>
             <div class="form-group">
                 <label for="new-password">{{ t('password') }}</label>
-                <input id="new-password" name="password" type="password" required autocomplete="new-password">
+                <input id="new-password" name="password" type="password" class="field-control" required autocomplete="new-password">
             </div>
             <div class="form-group">
                 <label for="new-role">{{ t('role') }}</label>
-                <select id="new-role" name="role">
+                <select id="new-role" name="role" class="field-control field-select">
                     <option value="agent">{{ t('role_agent') }}</option>
                     <option value="supervisor">{{ t('role_supervisor') }}</option>
                     <option value="admin">{{ t('role_admin') }}</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="new-employee-code">{{ t('employee_code') }}</label>
+                <input id="new-employee-code" name="employee_code" class="field-control" placeholder="{{ t('employee_code_optional') }}">
+            </div>
+            <div class="form-group">
+                <label for="new-employee-name">{{ t('employee') }}</label>
+                <input id="new-employee-name" name="employee_name" class="field-control" placeholder="{{ t('employee_name_optional') }}">
+            </div>
+            <div class="form-group">
+                <label for="new-branch">{{ t('branch') }}</label>
+                <select id="new-branch" name="branch_code" class="field-control field-select">
+                    <option value="">—</option>
+                    {% for b in branches %}
+                    <option value="{{ b.branch_code }}">{{ b.branch_name }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="form-group users-add-actions">
@@ -153,6 +172,61 @@
 window.LOTUS_ROLE_PRESETS = {{ role_presets|tojson }};
 </script>
 <script src="{{ url_for('static', filename='js/admin-users.js') }}"></script>
+{% elif tab == 'employees' %}
+<section class="panel elegant-form">
+    <h2 class="panel-title">{{ t('manage_agents') }}</h2>
+    <p class="subtitle">{{ t('agents_assign_hint') }}</p>
+    <form method="POST" action="{{ url_for('admin.add_employee') }}" class="form-grid fields-3" style="margin-bottom:1.5rem">
+        <div class="form-group">
+            <label for="emp-code">{{ t('employee_code') }}</label>
+            <input id="emp-code" name="employee_code" class="field-control" required placeholder="E004">
+        </div>
+        <div class="form-group">
+            <label for="emp-name">{{ t('employee') }}</label>
+            <input id="emp-name" name="employee_name" class="field-control" required>
+        </div>
+        <div class="form-group">
+            <label for="emp-branch">{{ t('branch') }}</label>
+            <select id="emp-branch" name="branch_code" class="field-control field-select">
+                <option value="">—</option>
+                {% for b in branches %}
+                <option value="{{ b.branch_code }}">{{ b.branch_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group span-all">
+            <button type="submit" class="btn btn-primary">{{ t('add_agent') }}</button>
+        </div>
+    </form>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ t('employee_code') }}</th>
+                <th>{{ t('employee') }}</th>
+                <th>{{ t('branch') }}</th>
+                <th>{{ t('status') }}</th>
+                <th>{{ t('actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for e in employees %}
+        <tr class="{{ '' if e.is_active else 'row-inactive' }}">
+            <td><code>{{ e.employee_code }}</code></td>
+            <td>{{ e.employee_name }}</td>
+            <td>{{ e.branch.branch_name if e.branch else '—' }}</td>
+            <td>{% if e.is_active %}<span class="badge badge-success">{{ t('active') }}</span>{% else %}<span class="badge badge-danger">{{ t('blocked') }}</span>{% endif %}</td>
+            <td>
+                <form method="POST" action="{{ url_for('admin.toggle_employee', code=e.employee_code) }}" class="inline-form">
+                    <button type="submit" class="btn btn-sm btn-secondary">{{ t('unblock_user') if not e.is_active else t('block_user') }}</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">{{ t('no_data') }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
 {% elif tab == 'types' %}
 <section class="panel">
     <h2 class="panel-title">{{ t('complaint_types') }}</h2>
@@ -237,43 +311,46 @@ window.LOTUS_ROLE_PRESETS = {{ role_presets|tojson }};
     </form>
 </section>
 {% elif tab == 'branches' %}
-<section class="panel">
+<section class="panel branch-emails-panel">
     <h2 class="panel-title">{{ t('branch_emails') }}</h2>
-    <p class="subtitle">{{ t('branch_emails_hint') }}</p>
-    <div class="branch-cards">
+    <div class="branch-emails-legend">
+        <div class="legend-item legend-to"><strong>{{ t('branch_new_complaint_to') }}</strong><span>{{ t('branch_manager_email') }}</span></div>
+        <div class="legend-item legend-cc"><strong>{{ t('branch_escalation_cc') }}</strong><span>{{ t('area_manager_email') }} · {{ t('sales_manager_email') }} · {{ t('owner_email') }}</span></div>
+    </div>
     {% for b in branches %}
-    <form method="POST" action="{{ url_for('admin.save_branch_emails') }}" class="branch-card elegant-form">
+    <form method="POST" action="{{ url_for('admin.save_branch_emails') }}" class="branch-email-row elegant-form">
         <input type="hidden" name="branch_code" value="{{ b.branch_code }}">
-        <div class="branch-card-header">
+        <div class="branch-email-head">
             <span class="branch-code-badge">{{ b.branch_code }}</span>
-            <strong>{{ b.branch_name }}</strong>
+            <input name="branch_name" class="field-control branch-name-input" value="{{ b.branch_name }}" aria-label="{{ t('branch') }}">
         </div>
-        <div class="form-grid fields-2">
-            <div class="form-group span-all">
-                <label>{{ t('branch') }}</label>
-                <input name="branch_name" class="field-control" value="{{ b.branch_name }}" placeholder="{{ t('branch') }}">
-            </div>
-            <div class="form-group">
+        <div class="branch-email-fields">
+            <div class="email-field-group email-to-group">
+                <span class="email-field-tag">{{ t('to') }}</span>
                 <label>{{ t('branch_manager_email') }}</label>
                 <input name="branch_manager_email" type="email" class="field-control" value="{{ b.branch_manager_email or '' }}" placeholder="manager@example.com">
             </div>
-            <div class="form-group">
+            <div class="email-field-group email-cc-group">
+                <span class="email-field-tag">{{ t('cc') }}</span>
                 <label>{{ t('area_manager_email') }}</label>
                 <input name="area_manager_email" type="email" class="field-control" value="{{ b.area_manager_email or '' }}" placeholder="area@example.com">
             </div>
-            <div class="form-group">
+            <div class="email-field-group email-cc-group">
+                <span class="email-field-tag">{{ t('cc') }}</span>
                 <label>{{ t('sales_manager_email') }}</label>
                 <input name="sales_manager_email" type="email" class="field-control" value="{{ b.sales_manager_email or '' }}" placeholder="sales@example.com">
             </div>
-            <div class="form-group">
+            <div class="email-field-group email-cc-group">
+                <span class="email-field-tag">{{ t('cc') }}</span>
                 <label>{{ t('owner_email') }}</label>
                 <input name="owner_email" type="email" class="field-control" value="{{ b.owner_email or '' }}" placeholder="owner@example.com">
             </div>
+            <div class="email-field-action">
+                <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
+            </div>
         </div>
-        <button type="submit" class="btn btn-sm btn-primary">{{ t('save') }}</button>
     </form>
     {% endfor %}
-    </div>
 </section>
 {% elif tab == 'branding' %}
 <section class="admin-section form-card">
