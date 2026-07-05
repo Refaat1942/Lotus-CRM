@@ -1,7 +1,27 @@
 {% extends "base.html" %}
 {% block title %}{{ t('my_complaints') }} - {{ brand }}{% endblock %}
 {% block content %}
-<h1 class="page-title">📌 {{ t('my_complaints') }} — {{ agent_name }}</h1>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📌 {{ t('my_complaints') }} — {{ agent_name }}</h1>
+        <p class="subtitle">{{ t('my_complaints_all_hint') }}</p>
+    </div>
+</div>
+
+<div class="stats-row compact-stats">
+    <div class="stat-card"><span class="stat-value">{{ summary.total }}</span><span class="stat-label">{{ t('total') }}</span></div>
+    <div class="stat-card highlight"><span class="stat-value">{{ summary.open }}</span><span class="stat-label">{{ t('open') }}</span></div>
+    <div class="stat-card warn"><span class="stat-value">{{ summary.followup }}</span><span class="stat-label">{{ t('needs_follow_up') }}</span></div>
+    <div class="stat-card"><span class="stat-value">{{ summary.closed }}</span><span class="stat-label">{{ t('closed') }}</span></div>
+</div>
+
+<div class="filter-tabs">
+    <a href="{{ url_for('complaints.my_complaints', filter='all') }}" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">{{ t('all') }}</a>
+    <a href="{{ url_for('complaints.my_complaints', filter='open') }}" class="filter-tab {% if status_filter == 'open' %}active{% endif %}">{{ t('open') }}</a>
+    <a href="{{ url_for('complaints.my_complaints', filter='followup') }}" class="filter-tab {% if status_filter == 'followup' %}active{% endif %}">⚠ {{ t('needs_follow_up') }}</a>
+    <a href="{{ url_for('complaints.my_complaints', filter='closed') }}" class="filter-tab {% if status_filter == 'closed' %}active{% endif %}">{{ t('closed') }}</a>
+</div>
+
 <table class="data-table">
     <thead>
         <tr>
@@ -9,6 +29,9 @@
             <th>{{ t('phone') }}</th>
             <th>{{ t('complaint_type') }}</th>
             <th>{{ t('status') }}</th>
+            <th>{{ t('urgency') }}</th>
+            <th>{{ t('follow_up') }}</th>
+            <th>{{ t('assigned_agent') }}</th>
             <th>{{ t('branch') }}</th>
             <th>{{ t('date') }}</th>
             <th></th>
@@ -16,17 +39,26 @@
     </thead>
     <tbody>
     {% for c in rows %}
-    <tr>
-        <td><span class="serial-badge">{{ t_serial(c) }}</span></td>
-        <td>{{ c.phone_number }}</td>
-        <td>{{ t_type(c.complaint_type) }}</td>
-        <td>{{ t_status(c.complaint_status) }}</td>
-        <td>{{ c.branch.branch_name if c.branch else c.branch_code }}</td>
-        <td>{{ c.complaint_date.strftime('%Y-%m-%d %H:%M') }}</td>
-        <td><a href="{{ url_for('complaints.complaint_detail', complaint_id=c.complaint_id) }}" class="btn btn-sm">{{ t('details') }}</a></td>
+    <tr class="{% if c.follow_up %}row-followup{% endif %} {% if c.is_mine %}row-mine{% endif %}">
+        <td><span class="serial-badge">{{ c.serial }}</span>{% if c.is_mine %} <span class="badge badge-info">{{ t('my_complaint_row') }}</span>{% endif %}{% if c.escalated %} <span class="badge-escalated">⬆</span>{% endif %}</td>
+        <td>{{ c.phone }}</td>
+        <td>{{ c.type_label }}</td>
+        <td><span class="status-pill status-{{ c.status }}">{{ c.status_label }}</span></td>
+        <td>{{ c.urgency_label }}</td>
+        <td>
+            {% if c.follow_up %}
+            <span class="followup-badge followup-{{ c.follow_up }}">{{ t(c.follow_up_label_key) }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+        </td>
+        <td>{{ c.assigned }}</td>
+        <td>{{ c.branch }}</td>
+        <td>{{ c.date }}</td>
+        <td><a href="{{ c.url }}" class="btn btn-sm">{{ t('details') }}</a></td>
     </tr>
     {% else %}
-    <tr><td colspan="7">{{ t('no_data') }}</td></tr>
+    <tr><td colspan="10">{{ t('no_data') }}</td></tr>
     {% endfor %}
     </tbody>
 </table>

@@ -15,5 +15,5 @@ class Config:
     BACKUP_DIR = os.getenv("BACKUP_DIR", "/backups")
     BACKUP_RETENTION_DAYS = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "app/static/uploads")
-    STATIC_VERSION = os.getenv("STATIC_VERSION", "20260705b")
+    STATIC_VERSION = os.getenv("STATIC_VERSION", "20260705c")
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024

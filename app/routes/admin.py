@@ -73,10 +73,15 @@ def index():
     users = User.query.order_by(User.username).all()
     functions = SystemFunction.query.order_by(SystemFunction.sort_order).all()
     access_map = {}
+    func_by_id = {f.id: f for f in functions}
     for u in users:
+        visible_routes = set()
+        for row in UserFunctionAccess.query.filter_by(user_id=u.id).all():
+            func = func_by_id.get(row.function_id)
+            if func and row.is_visible:
+                visible_routes.add(func.route_name)
         access_map[u.id] = {
-            row.function_id: row.is_visible
-            for row in UserFunctionAccess.query.filter_by(user_id=u.id).all()
+            f.id: (f.route_name in visible_routes) for f in functions if f.is_enabled
         }
     employees = Employee.query.order_by(Employee.employee_name).all()
     branches = Branch.query.order_by(Branch.branch_name).all()
@@ -569,7 +574,6 @@ def save_branch_emails():
 @admin_bp.route("/live")
 @login_required
 @feature_required("admin.live_monitor")
-@permission_required("can_manage_users")
 def live_monitor():
     return render_template("admin/live.html")
 
@@ -577,7 +581,6 @@ def live_monitor():
 @admin_bp.route("/api/live-feed")
 @login_required
 @feature_required("admin.live_monitor")
-@permission_required("can_manage_users")
 def live_feed_api():
     lang = session.get("lang", "ar")
     return jsonify(build_live_feed(lang))

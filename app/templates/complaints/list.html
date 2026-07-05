@@ -40,7 +40,8 @@
     <thead>
         <tr>
             <th>{{ t('complaint_serial') }}</th><th>{{ t('complaint_category') }}</th><th>{{ t('urgency') }}</th><th>{{ t('phone') }}</th><th>{{ t('customer') }}</th>
-            <th>{{ t('complaint_type') }}</th><th>{{ t('date') }}</th><th>{{ t('status') }}</th>
+            <th>{{ t('complaint_type') }}</th><th>{{ t('date') }}</th>            <th>{{ t('status') }}</th>
+            <th>{{ t('follow_up') }}</th>
             <th>{{ t('branch') }}</th><th>{{ t('creator') }}</th><th>{{ t('assigned_agent') }}</th><th>{{ t('shift') }}</th><th>{{ t('actions') }}</th>
         </tr>
     </thead>
@@ -51,9 +52,11 @@
 <script>
 const SEARCH_URL = {{ url_for('complaints.search_complaints')|tojson }};
 const DETAIL_URL = {{ url_for('complaints.complaint_detail', complaint_id=0)|tojson }}.replace('/0','');
-const today = new Date().toISOString().slice(0,10);
-document.getElementById('from').value = today;
-document.getElementById('to').value = today;
+const today = new Date();
+const weekAgo = new Date(today);
+weekAgo.setDate(today.getDate() - 7);
+document.getElementById('from').value = weekAgo.toISOString().slice(0,10);
+document.getElementById('to').value = today.toISOString().slice(0,10);
 
 let cachedRows = [];
 
@@ -82,10 +85,12 @@ async function searchComplaints() {
     const res = await fetch(SEARCH_URL + '?' + params);
     cachedRows = await res.json();
     document.querySelector('#complaints-table tbody').innerHTML = cachedRows.map((r, i) => `
-        <tr class="${r.alert ? 'alert-row' : ''} ${r.escalated ? 'escalated-row' : ''}" onclick="showSummary(cachedRows[${i}])" style="cursor:pointer">
+        <tr class="${r.follow_up ? 'row-followup' : ''} ${r.alert ? 'alert-row' : ''} ${r.escalated ? 'escalated-row' : ''}" onclick="showSummary(cachedRows[${i}])" style="cursor:pointer">
             <td><span class="serial-badge">${r.serial || r.id}</span>${r.escalated ? ' <span class="badge badge-escalated">⬆</span>' : ''}</td>
             <td>${r.category||'—'}</td><td>${r.urgency_label||r.urgency||'—'}</td><td>${r.phone}</td><td>${r.customer}</td>
-            <td>${r.type_label||r.type}</td><td>${r.date}</td><td>${r.status_label||r.status}</td><td>${r.branch}</td>
+            <td>${r.type_label||r.type}</td><td>${r.date}</td><td>${r.status_label||r.status}</td>
+            <td>${r.follow_up_label || '—'}</td>
+            <td>${r.branch}</td>
             <td>${r.creator}</td><td>${r.assigned||'—'}</td><td>${r.shift_label||r.shift}</td>
             <td><a href="${DETAIL_URL}/${r.id}" class="btn btn-sm" onclick="event.stopPropagation()">{{ t('details') }}</a></td>
         </tr>`).join('');

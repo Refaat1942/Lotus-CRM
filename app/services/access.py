@@ -60,11 +60,21 @@ def user_can_access(user, route_name):
 
     if not user or not user.is_authenticated:
         return False
-    func = SystemFunction.query.filter_by(route_name=route_name, is_enabled=True).first()
-    if not func:
+
+    funcs = SystemFunction.query.filter_by(route_name=route_name, is_enabled=True).all()
+    if not funcs:
         return False
-    access = UserFunctionAccess.query.filter_by(user_id=user.id, function_id=func.id).first()
-    return bool(access and access.is_visible)
+
+    if user.role == ROLE_ADMIN:
+        return True
+
+    func_ids = [f.id for f in funcs]
+    access = UserFunctionAccess.query.filter(
+        UserFunctionAccess.user_id == user.id,
+        UserFunctionAccess.function_id.in_(func_ids),
+        UserFunctionAccess.is_visible.is_(True),
+    ).first()
+    return access is not None
 
 
 def user_can_view_reports(user):
@@ -193,8 +203,13 @@ def save_user_access(user, form, functions):
         setattr(perms, field, field in form)
 
     enabled = [f for f in functions if f.is_enabled and f.route_name not in HIDDEN_ROUTES]
+    route_visible = {}
     for func in enabled:
-        visible = f"func_{func.id}" in form
+        checked = f"func_{func.id}" in form
+        route_visible[func.route_name] = route_visible.get(func.route_name, False) or checked
+
+    for func in enabled:
+        visible = route_visible.get(func.route_name, False)
         row = UserFunctionAccess.query.filter_by(user_id=user.id, function_id=func.id).first()
         if row:
             row.is_visible = visible

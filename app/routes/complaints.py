@@ -14,8 +14,10 @@ from app.services.email import (
     send_escalation_notification,
 )
 from app.services.complaints import (
+    build_agent_complaints_board,
     build_dashboard_overview,
     complaint_display_number,
+    follow_up_kind,
     generate_complaint_serial,
     my_complaints_filter,
 )
@@ -278,6 +280,7 @@ def search_complaints():
         cust_name = full_name(cust_data) if cust_data else ""
         alert = c.complaint_status == "مفتوحة" and (now - c.complaint_date).days >= 1
         cat_key = c.complaint_category or "delivery"
+        fu = follow_up_kind(c, now)
         result.append(
             {
                 "id": c.complaint_id,
@@ -297,6 +300,9 @@ def search_complaints():
                 "shift_label": translate_shift(c.shift, lang),
                 "alert": alert,
                 "escalated": bool(c.is_escalated),
+                "follow_up": fu,
+                "follow_up_label_key": f"follow_up_{fu}" if fu else None,
+                "follow_up_label": translate(f"follow_up_{fu}", lang) if fu else "",
                 "summary": build_complaint_summary(c, cust_data, lang),
             }
         )
@@ -305,9 +311,26 @@ def search_complaints():
 
 @complaints_bp.route("/<int:complaint_id>", methods=["GET", "POST"])
 @login_required
-@feature_required("complaints.list_complaints")
 def complaint_detail(complaint_id):
+    from app.services.access import user_can_access
+
+    if not user_can_access(current_user, "complaints.list_complaints") and not user_can_access(
+        current_user, "complaints.my_complaints"
+    ):
+        flash("feature_denied", "error")
+        return redirect(url_for("main.agent_home"))
+
     complaint = Complaint.query.get_or_404(complaint_id)
+
+    if not user_can_access(current_user, "complaints.list_complaints"):
+        owned = Complaint.query.filter(
+            Complaint.complaint_id == complaint_id,
+            my_complaints_filter(current_user),
+        ).first()
+        if not owned:
+            flash("access_denied", "error")
+            return redirect(url_for("complaints.my_complaints"))
+
     lang = session.get("lang", "ar")
 
     if request.method == "POST":
@@ -456,17 +479,26 @@ def complaint_detail(complaint_id):
 @login_required
 @feature_required("complaints.my_complaints")
 def my_complaints():
-    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    lang = session.get("lang", "ar")
+    status_filter = request.args.get("filter", "all")
     name = _agent_name()
-    rows = (
-        Complaint.query.filter(
-            _my_complaints_filter(),
-            Complaint.complaint_date >= today_start,
-        )
-        .order_by(Complaint.complaint_date.desc())
-        .all()
+    board = build_agent_complaints_board(current_user, lang, status_filter)
+    return render_template(
+        "complaints/my.html",
+        rows=board["items"],
+        summary=board["summary"],
+        agent_name=name,
+        status_filter=status_filter,
     )
-    return render_template("complaints/my.html", rows=rows, agent_name=name)
+
+
+@complaints_bp.route("/api/my-complaints")
+@login_required
+@feature_required("complaints.my_complaints")
+def my_complaints_api():
+    lang = session.get("lang", "ar")
+    status_filter = request.args.get("filter", "all")
+    return jsonify(build_agent_complaints_board(current_user, lang, status_filter))
 
 
 @complaints_bp.route("/dashboard")

@@ -49,10 +49,126 @@ def generate_complaint_serial(branch_code, when=None):
     raise RuntimeError("Could not generate unique complaint serial")
 
 
-def my_complaints_filter(user):
-    emp = user.employee if user.employee else None
+OPEN_STATUSES = ("مفتوحة", "جاري الحل")
+CLOSED_STATUS = "مغلقة"
+
+
+def _stale_hours_setting():
+    from app.models import AppSetting
+
+    try:
+        return int(AppSetting.get("notify_stale_hours", "24") or "24")
+    except ValueError:
+        return 24
+
+
+def follow_up_kind(complaint, now=None):
+    """Return follow-up reason key for open complaints, or None if closed."""
+    if complaint.complaint_status not in OPEN_STATUSES:
+        return None
+    now = now or datetime.now()
+    from app.services.urgency import URGENCY_IMMEDIATE
+
+    if complaint.urgency == URGENCY_IMMEDIATE:
+        return "immediate"
+    if complaint.is_escalated:
+        return "escalated"
+    stale_hours = _stale_hours_setting()
+    if (now - complaint.complaint_date).total_seconds() >= stale_hours * 3600:
+        return "stale"
+    if complaint.complaint_status == "مفتوحة":
+        return "open"
+    return "in_progress"
+
+
+def _agent_employee(user):
+    emp = user.employee if getattr(user, "employee", None) else None
     if not emp and user.employee_code:
         emp = Employee.query.get(user.employee_code)
+    return emp
+
+
+def _complaint_is_mine(complaint, user, emp=None):
+    emp = emp or _agent_employee(user)
+    if emp:
+        if complaint.assigned_to_code == emp.employee_code:
+            return True
+        if not complaint.assigned_to_code and complaint.created_by_code == emp.employee_code:
+            return True
+        return False
+    name = user.username
+    if complaint.assigned_to_name == name:
+        return True
+    if not complaint.assigned_to_name and complaint.created_by_name == name:
+        return True
+    return False
+
+
+def build_agent_complaints_board(user, lang="ar", status_filter="all"):
+    """All complaints with status and follow-up flags (highlight current agent's rows)."""
+    from app.services.i18n import translate_complaint_type, translate_status, translate_urgency
+    from app.models import ComplaintType
+
+    type_map = {t.name_ar: t.display_name(lang) for t in ComplaintType.query.all()}
+    emp = _agent_employee(user)
+
+    q = Complaint.query
+    if status_filter == "open":
+        q = q.filter(Complaint.complaint_status.in_(OPEN_STATUSES))
+    elif status_filter == "closed":
+        q = q.filter(Complaint.complaint_status == CLOSED_STATUS)
+    elif status_filter == "followup":
+        q = q.filter(Complaint.complaint_status.in_(OPEN_STATUSES))
+
+    rows = q.order_by(Complaint.complaint_date.desc()).limit(500).all()
+    now = datetime.now()
+    items = []
+    for c in rows:
+        kind = follow_up_kind(c, now)
+        if status_filter == "followup" and not kind:
+            continue
+        items.append(
+            {
+                "id": c.complaint_id,
+                "serial": complaint_display_number(c),
+                "phone": c.phone_number,
+                "type": c.complaint_type,
+                "type_label": type_map.get(
+                    c.complaint_type,
+                    translate_complaint_type(c.complaint_type, lang) if c.complaint_type else "—",
+                ),
+                "status": c.complaint_status,
+                "status_label": translate_status(c.complaint_status, lang),
+                "urgency": c.urgency or "متوسطة",
+                "urgency_label": translate_urgency(c.urgency or "متوسطة", lang),
+                "branch": c.branch.branch_name if c.branch else c.branch_code,
+                "date": c.complaint_date.strftime("%Y-%m-%d %H:%M"),
+                "assigned": c.assigned_to_name or "—",
+                "is_mine": _complaint_is_mine(c, user, emp),
+                "escalated": bool(c.is_escalated),
+                "follow_up": kind,
+                "follow_up_label_key": f"follow_up_{kind}" if kind else None,
+                "url": f"/complaints/{c.complaint_id}",
+            }
+        )
+
+    items.sort(key=lambda x: x["date"], reverse=True)
+    items.sort(key=lambda x: 0 if x["follow_up"] else 1)
+    open_count = sum(1 for i in items if i["status"] in OPEN_STATUSES)
+    followup_count = sum(1 for i in items if i["follow_up"])
+    return {
+        "items": items,
+        "summary": {
+            "total": len(items),
+            "open": open_count,
+            "followup": followup_count,
+            "closed": sum(1 for i in items if i["status"] == CLOSED_STATUS),
+        },
+    }
+
+
+def my_complaints_filter(user):
+    emp = _agent_employee(user)
     if emp:
         return or_(
             Complaint.assigned_to_code == emp.employee_code,
@@ -61,7 +177,7 @@ def my_complaints_filter(user):
                 & (Complaint.created_by_code == emp.employee_code)
             ),
         )
-    name = emp.employee_name if emp else user.username
+    name = user.username
     return or_(
         Complaint.assigned_to_name == name,
         (Complaint.assigned_to_name.is_(None) & (Complaint.created_by_name == name)),
